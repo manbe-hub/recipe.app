@@ -54,13 +54,11 @@
     <div class="container">
         <h2>🍳 キッズレシピ提案アプリ</h2>
         
-        <!-- 画像通りの2つのボタン -->
         <div class="action-buttons">
             <button class="btn-secondary" onclick="toggleRegisterForm()">➕ レシピを登録</button>
             <button class="btn-manage" onclick="toggleManageForm()">⚙️ 登録レシピ管理</button>
         </div>
 
-        <!-- レシピ登録・編集フォーム（ポップアップ） -->
         <div id="registerForm" class="box register-box">
             <h3 id="formHeading" style="color: #0277bd;">オリジナルレシピ登録</h3>
             <input type="hidden" id="editIndex" value="-1">
@@ -107,14 +105,12 @@
             <button onclick="toggleRegisterForm()" style="background: #999;">閉じる</button>
         </div>
 
-        <!-- 登録レシピ管理フォーム（ポップアップ） -->
         <div id="manageForm" class="box manage-box">
             <h3 style="color: #6a1b9a;">⚙️ 登録したレシピ一覧・編集</h3>
             <div id="customRecipesList"></div>
             <button onclick="toggleManageForm()" style="background: #999;">閉じる</button>
         </div>
 
-        <!-- メインの検索エリア（画像のデザインそのまま） -->
         <div class="input-group">
             <label for="ingredient">🔍 冷蔵庫にある食材は？</label>
             <input type="text" id="ingredient" placeholder="例：レタス" value="レタス">
@@ -127,7 +123,6 @@
         </div>
         <button onclick="suggestRecipe()">レシピを見る</button>
         
-        <!-- 提案結果 -->
         <div id="result"></div>
         <div id="saveArea" class="save-area">
             <input type="text" id="recipeTag" placeholder="タグ (例: お弁当, 時短)">
@@ -136,7 +131,6 @@
 
         <hr class="divider">
 
-        <!-- お気に入り一覧エリア -->
         <div class="favorites-section">
             <h3>⭐ お気に入り一覧</h3>
             <div id="favoritesList"></div>
