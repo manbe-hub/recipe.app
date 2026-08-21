@@ -5,195 +5,402 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>キッズ向け・パパッとレシピ提案ツール</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; background-color: #fff9e6; }
-        .container { background: white; padding: 20px; border-radius: 12px; max-width: 400px; margin: 0 auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #ff9800; font-size: 1.2em; }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 20px; background-color: #fff9e6; color: #333; }
+        .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; }
+        h2 { text-align: center; color: #ff9800; font-size: 1.3em; margin-top: 0; }
         .input-group { margin-bottom: 15px; }
-        label { font-size: 0.8em; font-weight: bold; color: #666; display: block; margin-bottom: 5px; }
-        input, select, textarea { width: 100%; padding: 10px; box-sizing: border-box; border: 2px solid #ddd; border-radius: 6px; font-size: 1em; }
-        button { background: #ff9800; color: white; border: none; padding: 12px; cursor: pointer; width: 100%; border-radius: 6px; font-weight: bold; margin-top: 10px; }
-        .recipe-item { border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 10px; background: #fafafa; position: relative; padding-top: 35px; }
-        .delete-btn { background: #e53935; padding: 5px 10px; width: auto; font-size: 0.8em; position: absolute; top: 10px; right: 10px; margin: 0; }
-        .edit-btn { background: #ffb300; padding: 5px 10px; width: auto; font-size: 0.8em; position: absolute; top: 10px; right: 70px; margin: 0; }
-        .method-manager { background: #f0f0f0; padding: 10px; border-radius: 6px; margin-bottom: 15px; }
-        .method-tag { display: inline-block; background: #fff; border: 1px solid #ccc; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin: 2px; }
+        label { font-size: 0.9em; font-weight: bold; color: #666; display: block; margin-bottom: 5px; }
+        input[type="text"], select, textarea { width: 100%; padding: 12px; box-sizing: border-box; border: 2px solid #ddd; border-radius: 6px; font-size: 1em; font-family: inherit; }
+        textarea { resize: vertical; min-height: 80px; }
+        
+        button { background: #ff9800; color: white; border: none; padding: 12px 20px; cursor: pointer; width: 100%; border-radius: 6px; font-size: 1.1em; font-weight: bold; transition: 0.3s; margin-top: 10px; }
+        button:hover { background: #e68a00; }
+        
+        .action-buttons { display: flex; gap: 10px; margin-bottom: 20px; }
+        .btn-secondary { background: #03a9f4; font-size: 0.9em; padding: 10px; flex: 1; margin: 0; }
+        .btn-secondary:hover { background: #0288d1; }
+        .btn-manage { background: #9c27b0; font-size: 0.9em; padding: 10px; flex: 1; margin: 0; }
+        .btn-manage:hover { background: #7b1fa2; }
+        
+        #result { margin-top: 20px; padding: 15px; background: #ffe0b2; border-radius: 8px; display: none; line-height: 1.6; }
+        .recipe-title { font-weight: bold; color: #d84315; font-size: 1.1em; margin-bottom: 5px; }
+        .tag { display: inline-block; background: #fff; color: #ff9800; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin-bottom: 8px; font-weight: bold; border: 1px solid #ff9800;}
+        
+        .save-area { display: none; margin-top: 15px; padding-top: 15px; border-top: 2px dashed #ddd; align-items: center; gap: 10px; }
+        .save-area input { margin: 0; flex: 1; padding: 10px; font-size: 0.9em; }
+        .save-area button { margin: 0; width: auto; background: #4caf50; padding: 10px 15px; font-size: 0.9em; white-space: nowrap; }
+        
+        .favorites-section { margin-top: 30px; border-top: 2px solid #ff9800; padding-top: 20px; }
+        .fav-item { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 15px; position: relative; line-height: 1.6; border: 1px solid #eee; padding-top: 35px; }
+        .delete-btn { background: #e53935; color: white; font-size: 0.8em; padding: 5px 10px; width: auto; position: absolute; top: 10px; right: 10px; }
+        .edit-btn { background: #ffb300; color: white; font-size: 0.8em; padding: 5px 10px; width: auto; position: absolute; top: 10px; right: 70px; border: none; border-radius: 6px; cursor: pointer; }
+        .edit-btn:hover { background: #ff8f00; }
+
+        .user-tag { display: inline-block; background: #e0f7fa; color: #00796b; padding: 3px 10px; border-radius: 12px; font-size: 0.8em; margin-bottom: 10px; font-weight: bold; border: 1px solid #00acc1; }
+
+        .box { padding: 20px; border-radius: 8px; margin-bottom: 25px; display: none; }
+        .register-box { background: #e3f2fd; border: 1px solid #bbdefb; }
+        .manage-box { background: #f3e5f5; border: 1px solid #e1bee7; }
+        .box h3 { margin-top: 0; font-size: 1.1em; text-align: center; }
+        .register-btn { background: #4caf50; margin-top: 15px; }
+        .register-btn:hover { background: #45a049; }
+
+        .section-title { font-weight: bold; color: #333; margin-top: 10px; font-size: 0.95em; border-bottom: 1px solid #ffb74d; padding-bottom: 2px; }
+        
+        .method-manager { background: #fff; padding: 10px; border-radius: 6px; margin-top: 5px; border: 1px solid #ccc; }
+        .method-tag { display: inline-block; background: #f0f0f0; border: 1px solid #bbb; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin: 2px; }
         .method-tag span { color: #e53935; cursor: pointer; margin-left: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2 id="formTitle">🍳 レシピ登録＆管理</h2>
+        <h2>🔍 キッズレシピ提案アプリ</h2>
         
-        <!-- 登録・編集エリア -->
-        <div class="input-group">
+        <div class="action-buttons">
+            <button class="btn-secondary" onclick="toggleRegisterForm()">➕ レシピを登録</button>
+            <button class="btn-manage" onclick="toggleManageForm()">⚙️ 登録レシピ管理</button>
+        </div>
+
+        <!-- レシピ登録・編集フォーム -->
+        <div id="registerForm" class="box register-box">
+            <h3 id="formHeading" style="color: #0277bd;">オリジナルレシピ登録</h3>
             <input type="hidden" id="editIndex" value="-1">
-            <label>📝 レシピ名</label>
-            <input type="text" id="rTitle" placeholder="例：レタスとツナの和え物">
-            <label>🛒 用意するもの</label>
-            <textarea id="rIng" placeholder="例：レタス、ツナ缶、ごま油"></textarea>
-            <label>🍳 手順</label>
-            <textarea id="rSteps" placeholder="例：1. レタスをちぎる&#10;2. 全部混ぜる"></textarea>
-            <label>⏱️ 調理方法（新しい方法も追加できます）</label>
-            <input type="text" id="newMethod" placeholder="新しい調理方法を入力">
-            <select id="rMethod"></select>
             
-            <!-- 間違えて登録した調理方法の削除用エリア -->
-            <div class="method-manager">
-                <label style="margin-bottom: 3px;">登録されている調理方法（×で削除できます）:</label>
-                <div id="methodTagsList"></div>
+            <div class="input-group">
+                <label>🍅 検索用のメイン食材</label>
+                <input type="text" id="regIngredient" placeholder="例：レタス">
             </div>
-
-            <label>⌛ 所要時間</label>
-            <select id="rTime">
-                <option value="5分">5分</option>
-                <option value="15分">15分</option>
-                <option value="30分">30分</option>
-                <option value="1時間">1時間</option>
-            </select>
-            <button id="saveBtn" onclick="saveRecipe()" style="background:#4caf50;">レシピを保存する</button>
-            <button id="cancelBtn" onclick="resetForm()" style="background:#999; display:none;">編集をキャンセル</button>
+            <div class="input-group">
+                <label>⏱️ 調理方法を選択</label>
+                <select id="regMethod"></select>
+            </div>
+            <div class="input-group">
+                <label>⚙️ 新しい調理方法を追加する</label>
+                <input type="text" id="newMethodInput" placeholder="例：オーブン、煮込みなど">
+                <button onclick="addNewMethod()" style="background: #03a9f4; font-size: 0.9em; padding: 8px;">この方法を追加</button>
+                <div class="method-manager" style="margin-top: 8px;">
+                    <label style="font-size: 0.8em; margin-bottom: 3px;">登録済みの調理方法（×で削除）:</label>
+                    <div id="methodTagsList"></div>
+                </div>
+            </div>
+            <div class="input-group">
+                <label>⌛ 所要時間</label>
+                <select id="regTime">
+                    <option value="5分">5分</option>
+                    <option value="15分">15分</option>
+                    <option value="30分">30分</option>
+                    <option value="1時間">1時間</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>📝 レシピ名</label>
+                <input type="text" id="regTitle" placeholder="例：レタスとツナの和え物">
+            </div>
+            <div class="input-group">
+                <label>🛒 用意するもの（材料）</label>
+                <textarea id="regIngredientsList" placeholder="例：レタス 1/4玉、ツナ缶 1個"></textarea>
+            </div>
+            <div class="input-group">
+                <label>🍳 手順（作り方）</label>
+                <textarea id="regSteps" placeholder="例：1. レタスをちぎる&#10;2. 混ぜる"></textarea>
+            </div>
+            <button id="submitRecipeBtn" class="register-btn" onclick="saveCustomRecipe()">このレシピを登録</button>
+            <button onclick="toggleRegisterForm()" style="background: #999; margin-top: 10px;">閉じる</button>
         </div>
 
-        <hr>
+        <!-- 登録レシピ管理フォーム -->
+        <div id="manageForm" class="box manage-box">
+            <h3 style="color: #6a1b9a;">⚙️ 登録したレシピ一覧</h3>
+            <div id="customRecipesList"></div>
+            <button onclick="toggleManageForm()" style="background: #999; margin-top: 10px;">閉じる</button>
+        </div>
 
-        <!-- 一覧エリア -->
+        <!-- 検索エリア -->
         <div class="input-group">
-            <label>📋 保存したレシピ一覧</label>
-            <button onclick="showRecipes()">一覧を更新する</button>
+            <label for="ingredient">🔍 冷蔵庫にある食材は？</label>
+            <input type="text" id="ingredient" placeholder="例：レタス" value="レタス">
         </div>
-        <div id="recipeList"></div>
+        <div class="input-group">
+            <label for="method">⏱️ 今日の調理方法は？</label>
+            <select id="method">
+                <option value="any">指定なし（とにかく美味しく！）</option>
+            </select>
+        </div>
+        <button onclick="suggestRecipe()">レシピを見る</button>
+        
+        <!-- 提案結果 -->
+        <div id="result"></div>
+        <div id="saveArea" class="save-area">
+            <input type="text" id="recipeTag" placeholder="タグ (例: お弁当, 時短)">
+            <button onclick="saveFavorite()">⭐ お気に入りに保存</button>
+        </div>
+
+        <!-- お気に入り一覧エリア -->
+        <div class="favorites-section">
+            <h3 style="color: #4caf50; font-size: 1.1em; margin-top: 0;">⭐ お気に入り一覧</h3>
+            <div id="favoritesList"></div>
+        </div>
     </div>
 
     <script>
-        window.onload = () => { loadMethods(); showRecipes(); };
+        let currentRecipeHTML = ""; 
 
-        function loadMethods() {
-            const methods = JSON.parse(localStorage.getItem("myMethods")) || ["電子レンジ", "包丁なし", "フライパン"];
-            const select = document.getElementById('rMethod');
-            select.innerHTML = methods.map(m => `<option value="${m}">${m}</option>`).join('');
+        window.onload = function() {
+            loadMethodSelectors();
+            displayFavorites();
+            displayCustomRecipes();
+        };
 
-            // 調理方法の削除用タグリストを表示
+        function getMethods() {
+            return JSON.parse(localStorage.getItem("myMethodsV2")) || ["電子レンジ", "包丁なし", "フライパン"];
+        }
+
+        function loadMethodSelectors() {
+            const methods = getMethods();
+            
+            // 登録・編集フォーム用のセレクトボックス
+            const regSelect = document.getElementById('regMethod');
+            regSelect.innerHTML = methods.map(m => `<option value="${m}">${m}</option>`).join('');
+
+            // 検索用のセレクトボックス
+            const searchSelect = document.getElementById('method');
+            searchSelect.innerHTML = '<option value="any">指定なし（とにかく美味しく！）</option>' + 
+                                     methods.map(m => `<option value="${m}">${m}</option>`).join('');
+
+            // 調理方法のタグ一覧（削除用）
             const tagsDiv = document.getElementById('methodTagsList');
             tagsDiv.innerHTML = methods.map(m => `<span class="method-tag">${m} <span onclick="deleteMethod('${m}')">×</span></span>`).join('');
         }
 
+        function addNewMethod() {
+            const input = document.getElementById('newMethodInput');
+            const val = input.value.trim();
+            if (!val) return;
+            let methods = getMethods();
+            if (!methods.includes(val)) {
+                methods.push(val);
+                localStorage.setItem("myMethodsV2", JSON.stringify(methods));
+                input.value = "";
+                loadMethodSelectors();
+                alert(`調理方法「${val}」を追加しました！`);
+            } else {
+                alert("すでに存在する調理方法です。");
+            }
+        }
+
         function deleteMethod(methodName) {
-            let methods = JSON.parse(localStorage.getItem("myMethods")) || ["電子レンジ", "包丁なし", "フライパン"];
+            let methods = getMethods();
             if (methods.length <= 1) {
                 alert("調理方法は最低1つは必要です！");
                 return;
             }
             if (confirm(`調理方法「${methodName}」を削除しますか？`)) {
                 methods = methods.filter(m => m !== methodName);
-                localStorage.setItem("myMethods", JSON.stringify(methods));
-                loadMethods();
+                localStorage.setItem("myMethodsV2", JSON.stringify(methods));
+                loadMethodSelectors();
             }
         }
 
-        function saveRecipe() {
-            const title = document.getElementById('rTitle').value;
-            const ing = document.getElementById('rIng').value;
-            const steps = document.getElementById('rSteps').value;
+        function toggleRegisterForm() {
+            const form = document.getElementById('registerForm');
+            if (form.style.display === 'block') {
+                form.style.display = 'none';
+                resetRegisterForm();
+            } else {
+                form.style.display = 'block';
+                document.getElementById('manageForm').style.display = 'none';
+            }
+        }
+
+        function toggleManageForm() {
+            const form = document.getElementById('manageForm');
+            if (form.style.display === 'block') {
+                form.style.display = 'none';
+            } else {
+                form.style.display = 'block';
+                document.getElementById('registerForm').style.display = 'none';
+                displayCustomRecipes();
+            }
+        }
+
+        function resetRegisterForm() {
+            document.getElementById('regIngredient').value = "";
+            document.getElementById('regTitle').value = "";
+            document.getElementById('regIngredientsList').value = "";
+            document.getElementById('regSteps').value = "";
+            document.getElementById('editIndex').value = "-1";
+            document.getElementById('formHeading').innerText = "オリジナルレシピ登録";
+            document.getElementById('submitRecipeBtn').innerText = "このレシピを登録";
+            document.getElementById('submitRecipeBtn').style.background = "#4caf50";
+        }
+
+        function saveCustomRecipe() {
+            const ing = document.getElementById('regIngredient').value.trim();
+            const method = document.getElementById('regMethod').value;
+            const time = document.getElementById('regTime').value;
+            const title = document.getElementById('regTitle').value.trim();
+            const ingList = document.getElementById('regIngredientsList').value.trim();
+            const steps = document.getElementById('regSteps').value.trim();
             const editIndex = parseInt(document.getElementById('editIndex').value);
 
-            if (!title || !ing || !steps) {
-                alert("レシピ名、用意するもの、手順はすべて入力してください！");
+            if (!ing || !title || !ingList || !steps) {
+                alert("すべての項目を入力してください！");
                 return;
             }
 
-            const newM = document.getElementById('newMethod').value.trim();
-            if(newM) {
-                const methods = JSON.parse(localStorage.getItem("myMethods")) || ["電子レンジ", "包丁なし", "フライパン"];
-                if(!methods.includes(newM)) {
-                    methods.push(newM);
-                    localStorage.setItem("myMethods", JSON.stringify(methods));
-                    loadMethods();
-                }
-                document.getElementById('newMethod').value = "";
-            }
-
-            const recipe = {
-                title: title,
-                ing: ing,
-                steps: steps,
-                method: document.getElementById('rMethod').value,
-                time: document.getElementById('rTime').value
-            };
-            
-            let list = JSON.parse(localStorage.getItem("myRecipes")) || [];
+            let customDb = JSON.parse(localStorage.getItem("customRecipesV3")) || [];
+            const recipeData = { ingredient: ing, method: method, time: time, title: title, ingredientsList: ingList, steps: steps };
 
             if (editIndex === -1) {
-                list.push(recipe);
-                alert("レシピを保存しました！");
+                customDb.push(recipeData);
+                alert("オリジナルレシピを登録しました！");
             } else {
-                list[editIndex] = recipe;
-                alert("レシピを更新しました！");
+                customDb[editIndex] = recipeData;
+                alert("レシピの内容を更新しました！");
             }
-
-            localStorage.setItem("myRecipes", JSON.stringify(list));
-            resetForm();
-            showRecipes();
+            
+            localStorage.setItem("customRecipesV3", JSON.stringify(customDb));
+            toggleRegisterForm();
+            displayCustomRecipes();
         }
 
-        function editRecipe(index) {
-            let list = JSON.parse(localStorage.getItem("myRecipes")) || [];
-            let r = list[index];
+        function displayCustomRecipes() {
+            const listDiv = document.getElementById('customRecipesList');
+            let customDb = JSON.parse(localStorage.getItem("customRecipesV3")) || [];
+            listDiv.innerHTML = ""; 
 
-            document.getElementById('rTitle').value = r.title;
-            document.getElementById('rIng').value = r.ing;
-            document.getElementById('rSteps').value = r.steps;
-            document.getElementById('rMethod').value = r.method;
-            document.getElementById('rTime').value = r.time;
+            if (customDb.length === 0) {
+                listDiv.innerHTML = "<p style='font-size: 0.9em; color: #888; text-align: center;'>登録されたレシピはありません。</p>";
+                return;
+            }
+
+            for (let i = 0; i < customDb.length; i++) {
+                let r = customDb[i];
+                let item = document.createElement("div");
+                item.className = "fav-item";
+                
+                item.innerHTML = `
+                    <div style="font-size: 0.85em; color: #666; margin-bottom: 3px;">食材: <strong>${r.ingredient}</strong> (⚙️ ${r.method} / ⌛ ${r.time})</div>
+                    <div class='recipe-title'>🍽️ ${r.title}</div>
+                    <div style="margin-top: 5px; font-size: 0.9em;">
+                        <strong>【材料】</strong><br>${r.ingredientsList.replace(/\n/g, "<br>")}<br>
+                        <strong>【手順】</strong><br>${r.steps.replace(/\n/g, "<br>")}
+                    </div>
+                    <button class="edit-btn" onclick="editCustomRecipe(${i})">編集</button>
+                    <button class="delete-btn" onclick="deleteCustomRecipe(${i})">削除</button>
+                `;
+                listDiv.appendChild(item);
+            }
+        }
+
+        function deleteCustomRecipe(index) {
+            if (confirm("本当にこのレシピを削除しますか？")) {
+                let customDb = JSON.parse(localStorage.getItem("customRecipesV3")) || [];
+                customDb.splice(index, 1); 
+                localStorage.setItem("customRecipesV3", JSON.stringify(customDb)); 
+                displayCustomRecipes(); 
+            }
+        }
+
+        function editCustomRecipe(index) {
+            let customDb = JSON.parse(localStorage.getItem("customRecipesV3")) || [];
+            let r = customDb[index];
+
+            document.getElementById('regIngredient').value = r.ingredient;
+            document.getElementById('regMethod').value = r.method;
+            document.getElementById('regTime').value = r.time || "5分";
+            document.getElementById('regTitle').value = r.title;
+            document.getElementById('regIngredientsList').value = r.ingredientsList;
+            document.getElementById('regSteps').value = r.steps;
             document.getElementById('editIndex').value = index;
 
-            document.getElementById('formTitle').innerText = "🍳 レシピを編集中";
-            document.getElementById('saveBtn').innerText = "変更を保存する";
-            document.getElementById('cancelBtn').style.display = "block";
+            document.getElementById('formHeading').innerText = "レシピの編集";
+            document.getElementById('submitRecipeBtn').innerText = "上書き更新する";
+            document.getElementById('submitRecipeBtn').style.background = "#ff9800";
 
+            document.getElementById('manageForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function resetForm() {
-            document.getElementById('rTitle').value = "";
-            document.getElementById('rIng').value = "";
-            document.getElementById('rSteps').value = "";
-            document.getElementById('newMethod').value = "";
-            document.getElementById('editIndex').value = "-1";
+        function suggestRecipe() {
+            const ingredient = document.getElementById('ingredient').value.trim();
+            const method = document.getElementById('method').value;
+            const resultDiv = document.getElementById('result');
+            const saveArea = document.getElementById('saveArea');
 
-            document.getElementById('formTitle').innerText = "🍳 レシピ登録＆管理";
-            document.getElementById('saveBtn').innerText = "レシピを保存する";
-            document.getElementById('cancelBtn').style.display = "none";
-        }
-
-        function showRecipes() {
-            const list = JSON.parse(localStorage.getItem("myRecipes")) || [];
-            const listDiv = document.getElementById('recipeList');
-            
-            if (list.length === 0) {
-                listDiv.innerHTML = "<p style='font-size: 0.9em; color: #888; text-align: center;'>保存されたレシピはまだありません。</p>";
+            if (ingredient === "") {
+                resultDiv.innerHTML = "食材を入力してくださいね！";
+                resultDiv.style.display = "block";
+                saveArea.style.display = "none";
                 return;
             }
 
-            listDiv.innerHTML = list.map((r, index) => `
-                <div class="recipe-item">
-                    <strong>${r.title}</strong><br>
-                    <small style="color: #666;">⚙️ ${r.method} / ⌛ ${r.time}</small><br>
-                    <div style="margin-top: 5px; font-size: 0.9em;">
-                        <strong>【材料】</strong><br>${r.ing.replace(/\n/g, "<br>")}<br>
-                        <strong>【手順】</strong><br>${r.steps.replace(/\n/g, "<br>")}
-                    </div>
-                    <button class="edit-btn" onclick="editRecipe(${index})">編集</button>
-                    <button class="delete-btn" onclick="deleteRecipe(${index})">削除</button>
-                </div>`).join('');
+            let customDb = JSON.parse(localStorage.getItem("customRecipesV3")) || [];
+            let matchedRecipe = customDb.find(function(recipe) {
+                return ingredient.includes(recipe.ingredient) && 
+                       (recipe.method === method || method === "any" || recipe.method === "any");
+            });
+
+            if (matchedRecipe) {
+                let tagText = `<span class='tag'>${matchedRecipe.method}</span> <span class='tag'>⌛ ${matchedRecipe.time}</span><br>`;
+                currentRecipeHTML = tagText + "<div class='recipe-title'>🍽️ " + matchedRecipe.title + "</div>" +
+                                    "<div class='section-title'>🛒 用意するもの</div>" +
+                                    matchedRecipe.ingredientsList.replace(/\n/g, "<br>") +
+                                    "<div class='section-title'>🍳 手順</div>" +
+                                    matchedRecipe.steps.replace(/\n/g, "<br>");
+            } else {
+                // サンプル・プレースホルダー
+                currentRecipeHTML = `<span class='tag'>${method === 'any' ? '指定なし' : method}</span><br>` +
+                                    `<div class='recipe-title'>🥬 ${ingredient}のお手軽一品</div>` +
+                                    "<div class='section-title'>🛒 用意するもの</div>" + ingredient + "、調味料適量<br>" +
+                                    "<div class='section-title'>🍳 手順</div>1. 食べやすい大きさに切る。<br>2. 調理して美味しく仕上げる！";
+            }
+
+            resultDiv.innerHTML = currentRecipeHTML;
+            resultDiv.style.display = "block";
+            saveArea.style.display = "flex";
+            document.getElementById("recipeTag").value = ""; 
         }
 
-        function deleteRecipe(index) {
-            if (confirm("このレシピを削除しますか？")) {
-                let list = JSON.parse(localStorage.getItem("myRecipes")) || [];
-                list.splice(index, 1);
-                localStorage.setItem("myRecipes", JSON.stringify(list));
-                showRecipes();
+        function saveFavorite() {
+            let favorites = JSON.parse(localStorage.getItem("myFavoritesV3")) || [];
+            let inputTag = document.getElementById("recipeTag").value.trim();
+            if (inputTag === "") inputTag = "タグなし";
+            
+            let isExist = favorites.some(fav => fav.html === currentRecipeHTML);
+            if (!isExist) {
+                favorites.push({ html: currentRecipeHTML, tag: inputTag }); 
+                localStorage.setItem("myFavoritesV3", JSON.stringify(favorites)); 
+                alert("お気に入りに追加しました！");
+                displayFavorites(); 
+            } else {
+                alert("このレシピはすでにお気に入りにあります！");
             }
+        }
+
+        function displayFavorites() {
+            const listDiv = document.getElementById('favoritesList');
+            let favorites = JSON.parse(localStorage.getItem("myFavoritesV3")) || [];
+            listDiv.innerHTML = ""; 
+            if (favorites.length === 0) {
+                listDiv.innerHTML = "<p style='font-size: 0.9em; color: #888;'>まだ保存されたレシピはありません。</p>";
+                return;
+            }
+            for (let i = 0; i < favorites.length; i++) {
+                let item = document.createElement("div");
+                item.className = "fav-item";
+                let tagHTML = `<span class="user-tag">🏷️ ${favorites[i].tag}</span><br>`;
+                item.innerHTML = tagHTML + favorites[i].html + `<button class="delete-btn" onclick="deleteFavorite(${i})">削除</button>`;
+                listDiv.appendChild(item);
+            }
+        }
+
+        function deleteFavorite(index) {
+            let favorites = JSON.parse(localStorage.getItem("myFavoritesV3")) || [];
+            favorites.splice(index, 1); 
+            localStorage.setItem("myFavoritesV3", JSON.stringify(favorites)); 
+            displayFavorites(); 
         }
     </script>
 </body>
