@@ -5,88 +5,131 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>キッズ向け・パパッとレシピ提案ツール</title>
     <style>
-        body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 20px; background-color: #fff9e6; color: #333; }
-        .container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; }
-        h2 { text-align: center; color: #ff9800; font-size: 1.2em; margin-bottom: 20px; }
+        body { font-family: sans-serif; padding: 20px; background-color: #fff9e6; }
+        .container { background: white; padding: 20px; border-radius: 12px; max-width: 400px; margin: 0 auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #ff9800; font-size: 1.2em; }
         .input-group { margin-bottom: 15px; }
-        label { font-size: 0.85em; font-weight: bold; color: #666; display: block; margin-bottom: 5px; }
-        input, select { width: 100%; padding: 10px; box-sizing: border-box; border: 2px solid #ddd; border-radius: 6px; font-size: 1em; }
-        button { background: #ff9800; color: white; border: none; padding: 12px; cursor: pointer; width: 100%; border-radius: 6px; font-weight: bold; margin-top: 5px; }
-        .result-box { margin-top: 20px; padding: 15px; background: #fff3e0; border-radius: 8px; display: none; line-height: 1.5; }
+        label { font-size: 0.8em; font-weight: bold; color: #666; display: block; margin-bottom: 5px; }
+        input, select, textarea { width: 100%; padding: 10px; box-sizing: border-box; border: 2px solid #ddd; border-radius: 6px; font-size: 1em; }
+        button { background: #ff9800; color: white; border: none; padding: 12px; cursor: pointer; width: 100%; border-radius: 6px; font-weight: bold; margin-top: 10px; }
+        .recipe-item { border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 10px; background: #fafafa; position: relative; }
+        .delete-btn { background: #e53935; padding: 5px 10px; width: auto; font-size: 0.8em; position: absolute; top: 10px; right: 10px; margin: 0; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>🍳 キッズレシピ提案</h2>
+        <h2>🍳 レシピ登録＆管理</h2>
         
-        <!-- 調理方法の追加 -->
+        <!-- 登録エリア -->
         <div class="input-group">
-            <label>⚙️ 調理方法を増やす</label>
-            <input type="text" id="newMethod" placeholder="例：オーブン">
-            <button onclick="addMethod()" style="background:#03a9f4;">方法を追加する</button>
-        </div>
-
-        <div class="input-group">
-            <label>⏱️ 調理方法を選択</label>
-            <select id="methodSelector"><option value="any">指定なし</option></select>
-        </div>
-
-        <!-- 所要時間の選択 -->
-        <div class="input-group">
+            <label>📝 レシピ名</label>
+            <input type="text" id="rTitle" placeholder="例：レタスとツナの和え物">
+            <label>🛒 用意するもの</label>
+            <textarea id="rIng" placeholder="例：レタス、ツナ缶、ごま油"></textarea>
+            <label>🍳 手順</label>
+            <textarea id="rSteps" placeholder="例：1. レタスをちぎる&#10;2. 全部混ぜる"></textarea>
+            <label>⏱️ 調理方法（新しい方法も入力できます）</label>
+            <input type="text" id="newMethod" placeholder="例：オーブン、レンジなど">
+            <select id="rMethod"></select>
             <label>⌛ 所要時間</label>
-            <select id="timeSelector">
-                <option value="any">指定なし</option>
+            <select id="rTime">
                 <option value="5分">5分</option>
                 <option value="15分">15分</option>
                 <option value="30分">30分</option>
                 <option value="1時間">1時間</option>
             </select>
+            <button onclick="saveRecipe()" style="background:#4caf50;">レシピを保存する</button>
         </div>
 
+        <hr>
+
+        <!-- 一覧・検索エリア -->
         <div class="input-group">
-            <label>🔍 食材</label>
-            <input type="text" id="ingredient" placeholder="例：レタス">
+            <label>📋 保存したレシピ一覧</label>
+            <button onclick="showRecipes()">一覧を表示する</button>
         </div>
-        
-        <button onclick="suggestRecipe()">レシピを見る</button>
-        <div id="result" class="result-box"></div>
+        <div id="recipeList"></div>
     </div>
 
     <script>
-        const initialMethods = ["電子レンジ", "包丁なし", "フライパン"];
-
-        window.onload = function() { loadMethods(); };
+        window.onload = () => { loadMethods(); showRecipes(); };
 
         function loadMethods() {
-            let methods = JSON.parse(localStorage.getItem("myMethods")) || initialMethods;
-            const selector = document.getElementById('methodSelector');
-            selector.innerHTML = '<option value="any">指定なし</option>';
-            methods.forEach(m => {
-                let opt = document.createElement('option');
-                opt.value = m; opt.innerText = m;
-                selector.appendChild(opt);
-            });
+            const methods = JSON.parse(localStorage.getItem("myMethods")) || ["電子レンジ", "包丁なし", "フライパン"];
+            const select = document.getElementById('rMethod');
+            select.innerHTML = methods.map(m => `<option value="${m}">${m}</option>`).join('');
         }
 
-        function addMethod() {
-            const input = document.getElementById('newMethod');
-            if (!input.value) return;
-            let methods = JSON.parse(localStorage.getItem("myMethods")) || initialMethods;
-            methods.push(input.value);
-            localStorage.setItem("myMethods", JSON.stringify(methods));
-            input.value = "";
-            loadMethods();
-            alert("追加しました！");
-        }
+        function saveRecipe() {
+            const title = document.getElementById('rTitle').value;
+            const ing = document.getElementById('rIng').value;
+            const steps = document.getElementById('rSteps').value;
 
-        function suggestRecipe() {
-            const ing = document.getElementById('ingredient').value;
-            const method = document.getElementById('methodSelector').value;
-            const time = document.getElementById('timeSelector').value;
-            const result = document.getElementById('result');
+            if (!title || !ing || !steps) {
+                alert("レシピ名、用意するもの、手順はすべて入力してください！");
+                return;
+            }
+
+            const newM = document.getElementById('newMethod').value.trim();
+            if(newM) {
+                const methods = JSON.parse(localStorage.getItem("myMethods")) || ["電子レンジ", "包丁なし", "フライパン"];
+                if(!methods.includes(newM)) {
+                    methods.push(newM);
+                    localStorage.setItem("myMethods", JSON.stringify(methods));
+                    loadMethods();
+                }
+                document.getElementById('newMethod').value = "";
+            }
+
+            const recipe = {
+                title: title,
+                ing: ing,
+                steps: steps,
+                method: document.getElementById('rMethod').value,
+                time: document.getElementById('rTime').value
+            };
             
-            result.style.display = "block";
-            result.innerHTML = `<strong>${ing}</strong> を使って<br><strong>${method}</strong> かつ <strong>${time}</strong> で作る料理を考え中...`;
+            const list = JSON.parse(localStorage.getItem("myRecipes")) || [];
+            list.push(recipe);
+            localStorage.setItem("myRecipes", JSON.stringify(list));
+            
+            // フォームをクリア
+            document.getElementById('rTitle').value = "";
+            document.getElementById('rIng').value = "";
+            document.getElementById('rSteps').value = "";
+
+            alert("レシピを保存しました！");
+            showRecipes();
+        }
+
+        function showRecipes() {
+            const list = JSON.parse(localStorage.getItem("myRecipes")) || [];
+            const listDiv = document.getElementById('recipeList');
+            
+            if (list.length === 0) {
+                listDiv.innerHTML = "<p style='font-size: 0.9em; color: #888; text-align: center;'>保存されたレシピはまだありません。</p>";
+                return;
+            }
+
+            listDiv.innerHTML = list.map((r, index) => `
+                <div class="recipe-item">
+                    <strong>${r.title}</strong><br>
+                    <small style="color: #666;">⚙️ ${r.method} / ⌛ ${r.time}</small><br>
+                    <div style="margin-top: 5px; font-size: 0.9em;">
+                        <strong>【材料】</strong><br>${r.ing.replace(/\n/g, "<br>")}<br>
+                        <strong>【手順】</strong><br>${r.steps.replace(/\n/g, "<br>")}
+                    </div>
+                    <button class="delete-btn" onclick="deleteRecipe(${index})">削除</button>
+                </div>`).join('');
+        }
+
+        function deleteRecipe(index) {
+            if (confirm("このレシピを削除しますか？")) {
+                let list = JSON.parse(localStorage.getItem("myRecipes")) || [];
+                list.splice(index, 1);
+                localStorage.setItem("myRecipes", JSON.stringify(list));
+                showRecipes();
+            }
         }
     </script>
 </body>
