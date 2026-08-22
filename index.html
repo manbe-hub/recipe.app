@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>キッズレシピ提案アプリ</title>
+    <title>キッズレシピ提案アプリ（共有版）</title>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 20px; background-color: #fff9e6; color: #333; }
         .container { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); max-width: 400px; margin: 0 auto; }
@@ -49,6 +49,43 @@
         .method-tag { display: inline-block; background: #fff; border: 1px solid #ccc; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin: 2px; }
         .method-tag span { color: #e53935; cursor: pointer; margin-left: 5px; font-weight: bold; }
     </style>
+
+    <!-- FirebaseのSDKを読み込み -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // ==========================================
+        // ▼ ここをご自身のFirebase設定に書き換えてください
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // グローバルに使えるようにwindowに登録
+        window.db = db;
+        window.collection = collection;
+        window.addDoc = addDoc;
+        window.getDocs = getDocs;
+        window.doc = doc;
+        window.deleteDoc = deleteDoc;
+        window.updateDoc = updateDoc;
+
+        // アプリ起動時にデータを読み込む
+        window.onload = async function() {
+            loadMethodSelectors();
+            await displayCustomRecipes();
+            displayFavorites();
+        };
+    </script>
 </head>
 <body>
     <div class="container">
@@ -59,9 +96,10 @@
             <button class="btn-manage" onclick="toggleManageForm()">⚙️ 登録レシピ管理</button>
         </div>
 
+        <!-- 登録・編集フォーム -->
         <div id="registerForm" class="box register-box">
             <h3 id="formHeading" style="color: #0277bd;">オリジナルレシピ登録</h3>
-            <input type="hidden" id="editIndex" value="-1">
+            <input type="hidden" id="editDocId" value="">
             
             <div class="input-group">
                 <label>🍅 検索用のメイン食材</label>
@@ -105,12 +143,14 @@
             <button onclick="toggleRegisterForm()" style="background: #999;">閉じる</button>
         </div>
 
+        <!-- 登録レシピ管理フォーム -->
         <div id="manageForm" class="box manage-box">
             <h3 style="color: #6a1b9a;">⚙️ 登録したレシピ一覧・編集</h3>
-            <div id="customRecipesList"></div>
+            <div id="customRecipesList">読み込み中...</div>
             <button onclick="toggleManageForm()" style="background: #999;">閉じる</button>
         </div>
 
+        <!-- 検索エリア -->
         <div class="input-group">
             <label for="ingredient">🔍 冷蔵庫にある食材は？</label>
             <input type="text" id="ingredient" placeholder="例：レタス" value="レタス">
@@ -140,27 +180,21 @@
     <script>
         let currentRecipeHTML = ""; 
 
-        window.onload = function() {
-            loadMethodSelectors();
-            displayFavorites();
-        };
-
         function getMethods() {
             return JSON.parse(localStorage.getItem("myMethodsV3")) || ["電子レンジ", "包丁なし", "フライパン"];
         }
 
         function loadMethodSelectors() {
             const methods = getMethods();
-            
             const regSelect = document.getElementById('regMethod');
-            regSelect.innerHTML = methods.map(m => `<option value="${m}">${m}</option>`).join('');
+            if(regSelect) regSelect.innerHTML = methods.map(m => `<option value="${m}">${m}</option>`).join('');
 
             const searchSelect = document.getElementById('method');
-            searchSelect.innerHTML = '<option value="any">指定なし（とにかく美味しく！）</option>' + 
+            if(searchSelect) searchSelect.innerHTML = '<option value="any">指定なし（とにかく美味しく！）</option>' + 
                                      methods.map(m => `<option value="${m}">${m}</option>`).join('');
 
             const tagsDiv = document.getElementById('methodTagsList');
-            tagsDiv.innerHTML = methods.map(m => `<span class="method-tag">${m} <span onclick="deleteMethod('${m}')">×</span></span>`).join('');
+            if(tagsDiv) tagsDiv.innerHTML = methods.map(m => `<span class="method-tag">${m} <span onclick="deleteMethod('${m}')">×</span></span>`).join('');
         }
 
         function addNewMethod() {
@@ -219,83 +253,98 @@
             document.getElementById('regTitle').value = "";
             document.getElementById('regIngredientsList').value = "";
             document.getElementById('regSteps').value = "";
-            document.getElementById('editIndex').value = "-1";
+            document.getElementById('editDocId').value = "";
             document.getElementById('formHeading').innerText = "オリジナルレシピ登録";
             document.getElementById('submitRecipeBtn').innerText = "このレシピを登録";
             document.getElementById('submitRecipeBtn').style.background = "#4caf50";
         }
 
-        function saveCustomRecipe() {
+        // Firebaseへの保存・更新処理
+        async function saveCustomRecipe() {
             const ing = document.getElementById('regIngredient').value.trim();
             const method = document.getElementById('regMethod').value;
             const time = document.getElementById('regTime').value;
             const title = document.getElementById('regTitle').value.trim();
             const ingList = document.getElementById('regIngredientsList').value.trim();
             const steps = document.getElementById('regSteps').value.trim();
-            const editIndex = parseInt(document.getElementById('editIndex').value);
+            const editDocId = document.getElementById('editDocId').value;
 
             if (!ing || !title || !ingList || !steps) {
                 alert("すべての項目を入力してください！");
                 return;
             }
 
-            let customDb = JSON.parse(localStorage.getItem("customRecipesV4")) || [];
             const recipeData = { ingredient: ing, method: method, time: time, title: title, ingredientsList: ingList, steps: steps };
 
-            if (editIndex === -1) {
-                customDb.push(recipeData);
-                alert("オリジナルレシピを登録しました！");
-            } else {
-                customDb[editIndex] = recipeData;
-                alert("レシピの内容を更新しました！");
+            try {
+                if (!editDocId) {
+                    await window.addDoc(window.collection(window.db, "sharedRecipes"), recipeData);
+                    alert("みんなの共通レシピとして登録しました！");
+                } else {
+                    const docRef = window.doc(window.db, "sharedRecipes", editDocId);
+                    await window.updateDoc(docRef, recipeData);
+                    alert("共通レシピを更新しました！");
+                }
+                toggleRegisterForm();
+                await displayCustomRecipes();
+            } catch (e) {
+                console.error("エラー: ", e);
+                alert("保存に失敗しました。");
             }
-            
-            localStorage.setItem("customRecipesV4", JSON.stringify(customDb));
-            toggleRegisterForm();
-            displayCustomRecipes();
         }
 
-        function displayCustomRecipes() {
+        // Firebaseから一覧を取得
+        async function displayCustomRecipes() {
             const listDiv = document.getElementById('customRecipesList');
-            let customDb = JSON.parse(localStorage.getItem("customRecipesV4")) || [];
-            listDiv.innerHTML = ""; 
+            listDiv.innerHTML = "読み込み中...";
+            
+            try {
+                const querySnapshot = await window.getDocs(window.collection(window.db, "sharedRecipes"));
+                listDiv.innerHTML = ""; 
 
-            if (customDb.length === 0) {
-                listDiv.innerHTML = "<p style='font-size: 0.9em; color: #888; text-align: center;'>登録されたレシピはありません。</p>";
-                return;
-            }
+                if (querySnapshot.empty) {
+                    listDiv.innerHTML = "<p style='font-size: 0.9em; color: #888; text-align: center;'>登録された共通レシピはありません。</p>";
+                    return;
+                }
 
-            for (let i = 0; i < customDb.length; i++) {
-                let r = customDb[i];
-                let item = document.createElement("div");
-                item.className = "fav-item";
-                
-                item.innerHTML = `
-                    <div style="font-size: 0.85em; color: #666; margin-bottom: 3px;">食材: <strong>${r.ingredient}</strong> (⚙️ ${r.method} / ⌛ ${r.time})</div>
-                    <div class='recipe-title'>🍽️ ${r.title}</div>
-                    <div style="margin-top: 5px; font-size: 0.9em;">
-                        <strong>【材料】</strong><br>${r.ingredientsList.replace(/\n/g, "<br>")}<br>
-                        <strong>【手順】</strong><br>${r.steps.replace(/\n/g, "<br>")}
-                    </div>
-                    <button class="edit-btn" onclick="editCustomRecipe(${i})">編集</button>
-                    <button class="delete-btn" onclick="deleteCustomRecipe(${i})">削除</button>
-                `;
-                listDiv.appendChild(item);
+                querySnapshot.forEach((documentSnap) => {
+                    let r = documentSnap.data();
+                    let id = documentSnap.id;
+                    let item = document.createElement("div");
+                    item.className = "fav-item";
+                    
+                    item.innerHTML = `
+                        <div style="font-size: 0.85em; color: #666; margin-bottom: 3px;">食材: <strong>${r.ingredient}</strong> (⚙️ ${r.method} / ⌛ ${r.time})</div>
+                        <div class='recipe-title'>🍽️ ${r.title}</div>
+                        <div style="margin-top: 5px; font-size: 0.9em;">
+                            <strong>【材料】</strong><br>${r.ingredientsList.replace(/\n/g, "<br>")}<br>
+                            <strong>【手順】</strong><br>${r.steps.replace(/\n/g, "<br>")}
+                        </div>
+                        <button class="edit-btn" onclick="editCustomRecipe('${id}', '${encodeURIComponent(JSON.stringify(r))}')">編集</button>
+                        <button class="delete-btn" onclick="deleteCustomRecipe('${id}')">削除</button>
+                    `;
+                    listDiv.appendChild(item);
+                });
+            } catch (e) {
+                console.error("データ取得エラー: ", e);
+                listDiv.innerHTML = "<p style='font-size: 0.9em; color: red; text-align: center;'>データの読み込みに失敗しました。</p>";
             }
         }
 
-        function deleteCustomRecipe(index) {
-            if (confirm("本当にこのレシピを削除しますか？")) {
-                let customDb = JSON.parse(localStorage.getItem("customRecipesV4")) || [];
-                customDb.splice(index, 1); 
-                localStorage.setItem("customRecipesV4", JSON.stringify(customDb)); 
-                displayCustomRecipes(); 
+        async function deleteCustomRecipe(id) {
+            if (confirm("本当にこの共通レシピを削除しますか？")) {
+                try {
+                    await window.deleteDoc(window.doc(window.db, "sharedRecipes", id));
+                    await displayCustomRecipes();
+                } catch (e) {
+                    console.error("削除エラー: ", e);
+                    alert("削除に失敗しました。");
+                }
             }
         }
 
-        function editCustomRecipe(index) {
-            let customDb = JSON.parse(localStorage.getItem("customRecipesV4")) || [];
-            let r = customDb[index];
+        function editCustomRecipe(id, encodedData) {
+            let r = JSON.parse(decodeURIComponent(encodedData));
 
             document.getElementById('regIngredient').value = r.ingredient;
             document.getElementById('regMethod').value = r.method;
@@ -303,9 +352,9 @@
             document.getElementById('regTitle').value = r.title;
             document.getElementById('regIngredientsList').value = r.ingredientsList;
             document.getElementById('regSteps').value = r.steps;
-            document.getElementById('editIndex').value = index;
+            document.getElementById('editDocId').value = id;
 
-            document.getElementById('formHeading').innerText = "レシピの編集";
+            document.getElementById('formHeading').innerText = "共通レシピの編集";
             document.getElementById('submitRecipeBtn').innerText = "上書き更新する";
             document.getElementById('submitRecipeBtn').style.background = "#ff9800";
 
@@ -314,7 +363,8 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function suggestRecipe() {
+        // 検索時の処理（Firebaseから取得したデータも含めて検索できるように修正）
+        async function suggestRecipe() {
             const ingredient = document.getElementById('ingredient').value.trim();
             const method = document.getElementById('method').value;
             const resultDiv = document.getElementById('result');
@@ -327,30 +377,38 @@
                 return;
             }
 
-            let customDb = JSON.parse(localStorage.getItem("customRecipesV4")) || [];
-            let matchedRecipe = customDb.find(function(recipe) {
-                return ingredient.includes(recipe.ingredient) && 
-                       (recipe.method === method || method === "any");
-            });
+            try {
+                const querySnapshot = await window.getDocs(window.collection(window.db, "sharedRecipes"));
+                let matchedRecipe = null;
 
-            if (matchedRecipe) {
-                let tagText = `<span class='tag'>${matchedRecipe.method}</span> <span class='tag'>⌛ ${matchedRecipe.time}</span><br>`;
-                currentRecipeHTML = tagText + "<div class='recipe-title'>🍽️ " + matchedRecipe.title + "</div>" +
-                                    "<div class='section-title'>🛒 用意するもの</div>" +
-                                    matchedRecipe.ingredientsList.replace(/\n/g, "<br>") +
-                                    "<div class='section-title'>🍳 手順</div>" +
-                                    matchedRecipe.steps.replace(/\n/g, "<br>");
-            } else {
-                currentRecipeHTML = `<span class='tag'>${method === 'any' ? '指定なし' : method}</span><br>` +
-                                    `<div class='recipe-title'>🥬 ${ingredient}のお手軽一品</div>` +
-                                    "<div class='section-title'>🛒 用意するもの</div>" + ingredient + "、調味料適量<br>" +
-                                    "<div class='section-title'>🍳 手順</div>1. 食べやすい大きさに切る。<br>2. 調理して美味しく仕上げる！";
+                querySnapshot.forEach((documentSnap) => {
+                    let recipe = documentSnap.data();
+                    if (ingredient.includes(recipe.ingredient) && (recipe.method === method || method === "any")) {
+                        matchedRecipe = recipe;
+                    }
+                });
+
+                if (matchedRecipe) {
+                    let tagText = `<span class='tag'>${matchedRecipe.method}</span> <span class='tag'>⌛ ${matchedRecipe.time}</span><br>`;
+                    currentRecipeHTML = tagText + "<div class='recipe-title'>🍽️ " + matchedRecipe.title + "</div>" +
+                                        "<div class='section-title'>🛒 用意するもの</div>" +
+                                        matchedRecipe.ingredientsList.replace(/\n/g, "<br>") +
+                                        "<div class='section-title'>🍳 手順</div>" +
+                                        matchedRecipe.steps.replace(/\n/g, "<br>");
+                } else {
+                    currentRecipeHTML = `<span class='tag'>${method === 'any' ? '指定なし' : method}</span><br>` +
+                                        `<div class='recipe-title'>🥬 ${ingredient}のお手軽一品</div>` +
+                                        "<div class='section-title'>🛒 用意するもの</div>" + ingredient + "、調味料適量<br>" +
+                                        "<div class='section-title'>🍳 手順</div>1. 食べやすい大きさに切る。<br>2. 調理して美味しく仕上げる！";
+                }
+
+                resultDiv.innerHTML = currentRecipeHTML;
+                resultDiv.style.display = "block";
+                saveArea.style.display = "flex";
+                document.getElementById("recipeTag").value = ""; 
+            } catch (e) {
+                console.error("検索エラー:", e);
             }
-
-            resultDiv.innerHTML = currentRecipeHTML;
-            resultDiv.style.display = "block";
-            saveArea.style.display = "flex";
-            document.getElementById("recipeTag").value = ""; 
         }
 
         function saveFavorite() {
