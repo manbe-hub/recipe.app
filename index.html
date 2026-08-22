@@ -55,10 +55,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // ==========================================
-        // ▼ ここをご自身のFirebase設定に書き換えてください
-        // ==========================================
-　　　　const firebaseConfig = {
+        const firebaseConfig = {
           apiKey: "AIzaSyCMH1b71DcLIeFR6R5QmqQrSqfqYr-kuQQ",
           authDomain: "recipe-c69de.firebaseapp.com",
           projectId: "recipe-c69de",
@@ -70,7 +67,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // グローバルに使えるようにwindowに登録
         window.db = db;
         window.collection = collection;
         window.addDoc = addDoc;
@@ -79,7 +75,6 @@
         window.deleteDoc = deleteDoc;
         window.updateDoc = updateDoc;
 
-        // アプリ起動時にデータを読み込む
         window.onload = async function() {
             loadMethodSelectors();
             await displayCustomRecipes();
@@ -96,7 +91,6 @@
             <button class="btn-manage" onclick="toggleManageForm()">⚙️ 登録レシピ管理</button>
         </div>
 
-        <!-- 登録・編集フォーム -->
         <div id="registerForm" class="box register-box">
             <h3 id="formHeading" style="color: #0277bd;">オリジナルレシピ登録</h3>
             <input type="hidden" id="editDocId" value="">
@@ -122,7 +116,7 @@
                 <label>⌛ 所要時間</label>
                 <select id="regTime">
                     <option value="5分">5分</option>
-                    <option value="15分">15分</option>
+                    <option value="10分">10分</option>
                     <option value="30分">30分</option>
                     <option value="1時間">1時間</option>
                 </select>
@@ -143,17 +137,15 @@
             <button onclick="toggleRegisterForm()" style="background: #999;">閉じる</button>
         </div>
 
-        <!-- 登録レシピ管理フォーム -->
         <div id="manageForm" class="box manage-box">
             <h3 style="color: #6a1b9a;">⚙️ 登録したレシピ一覧・編集</h3>
             <div id="customRecipesList">読み込み中...</div>
             <button onclick="toggleManageForm()" style="background: #999;">閉じる</button>
         </div>
 
-        <!-- 検索エリア -->
         <div class="input-group">
             <label for="ingredient">🔍 冷蔵庫にある食材は？</label>
-            <input type="text" id="ingredient" placeholder="例：レタス" value="レタス">
+            <input type="text" id="ingredient" placeholder="例：レタス" value="">
         </div>
         <div class="input-group">
             <label for="method">⏱️ 今日の調理方法は？</label>
@@ -259,7 +251,6 @@
             document.getElementById('submitRecipeBtn').style.background = "#4caf50";
         }
 
-        // Firebaseへの保存・更新処理
         async function saveCustomRecipe() {
             const ing = document.getElementById('regIngredient').value.trim();
             const method = document.getElementById('regMethod').value;
@@ -293,7 +284,6 @@
             }
         }
 
-        // Firebaseから一覧を取得
         async function displayCustomRecipes() {
             const listDiv = document.getElementById('customRecipesList');
             listDiv.innerHTML = "読み込み中...";
@@ -363,7 +353,6 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // 検索時の処理（Firebaseから取得したデータも含めて検索できるように修正）
         async function suggestRecipe() {
             const ingredient = document.getElementById('ingredient').value.trim();
             const method = document.getElementById('method').value;
@@ -395,16 +384,14 @@
                                         matchedRecipe.ingredientsList.replace(/\n/g, "<br>") +
                                         "<div class='section-title'>🍳 手順</div>" +
                                         matchedRecipe.steps.replace(/\n/g, "<br>");
+                    saveArea.style.display = "flex";
                 } else {
-                    currentRecipeHTML = `<span class='tag'>${method === 'any' ? '指定なし' : method}</span><br>` +
-                                        `<div class='recipe-title'>🥬 ${ingredient}のお手軽一品</div>` +
-                                        "<div class='section-title'>🛒 用意するもの</div>" + ingredient + "、調味料適量<br>" +
-                                        "<div class='section-title'>🍳 手順</div>1. 食べやすい大きさに切る。<br>2. 調理して美味しく仕上げる！";
+                    currentRecipeHTML = `<p style="text-align:center; color:#e53935; font-weight:bold;">該当するレシピが見つかりませんでした。<br>新しく登録してみましょう！</p>`;
+                    saveArea.style.display = "none";
                 }
 
                 resultDiv.innerHTML = currentRecipeHTML;
                 resultDiv.style.display = "block";
-                saveArea.style.display = "flex";
                 document.getElementById("recipeTag").value = ""; 
             } catch (e) {
                 console.error("検索エラー:", e);
