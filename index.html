@@ -27,6 +27,7 @@
         #result { margin-top: 20px; padding: 15px; background: #fff8e1; border-radius: 8px; display: none; line-height: 1.6; border: 1px solid #ffe082; }
         .recipe-title { font-weight: bold; color: #d84315; font-size: 1.1em; margin-bottom: 8px; }
         .tag { display: inline-block; background: #fff; color: #ff9800; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin-bottom: 8px; font-weight: bold; border: 1px solid #ff9800;}
+        .genre-tag { display: inline-block; background: #e1bee7; color: #6a1b9a; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin-bottom: 8px; font-weight: bold; border: 1px solid #ab47bc;}
         
         .save-area { display: none; margin-top: 15px; gap: 10px; align-items: center; }
         .save-area input { margin: 0; flex: 1; padding: 10px; font-size: 0.9em; }
@@ -48,6 +49,10 @@
         
         .method-tag { display: inline-block; background: #fff; border: 1px solid #ccc; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin: 2px; }
         .method-tag span { color: #e53935; cursor: pointer; margin-left: 5px; font-weight: bold; }
+        
+        /* 検索フォームのデザイン調整 */
+        .search-box { background: #fff3e0; padding: 15px; border-radius: 12px; border: 1px solid #ffcc80; margin-bottom: 20px; }
+        .search-box h3 { font-size: 1em; color: #e65100; margin-top: 0; margin-bottom: 15px; text-align: center; }
     </style>
 
     <!-- FirebaseのSDKを読み込み -->
@@ -100,6 +105,17 @@
                 <input type="text" id="regIngredient" placeholder="例：レタス">
             </div>
             <div class="input-group">
+                <label>🏷️ ジャンル</label>
+                <select id="regGenre">
+                    <option value="メイン">メイン</option>
+                    <option value="副菜">副菜</option>
+                    <option value="汁物">汁物</option>
+                    <option value="主食(ご飯・麺)">主食(ご飯・麺)</option>
+                    <option value="デザート">デザート</option>
+                    <option value="お弁当">お弁当</option>
+                </select>
+            </div>
+            <div class="input-group">
                 <label>⏱️ 調理方法を選択</label>
                 <select id="regMethod"></select>
             </div>
@@ -117,6 +133,7 @@
                 <select id="regTime">
                     <option value="5分">5分</option>
                     <option value="10分">10分</option>
+                    <option value="15分">15分</option>
                     <option value="30分">30分</option>
                     <option value="1時間">1時間</option>
                 </select>
@@ -143,17 +160,44 @@
             <button onclick="toggleManageForm()" style="background: #999;">閉じる</button>
         </div>
 
-        <div class="input-group">
-            <label for="ingredient">🔍 冷蔵庫にある食材は？</label>
-            <input type="text" id="ingredient" placeholder="例：レタス" value="">
+        <!-- 検索ボックス -->
+        <div class="search-box">
+            <h3>🔍 レシピを探す</h3>
+            <div class="input-group">
+                <label for="searchIngredient">🍅 食材（冷蔵庫にあるもの）</label>
+                <input type="text" id="searchIngredient" placeholder="例：レタス（空欄でもOK）" value="">
+            </div>
+            <div class="input-group">
+                <label for="searchGenre">🏷️ ジャンル</label>
+                <select id="searchGenre">
+                    <option value="any">指定なし</option>
+                    <option value="メイン">メイン</option>
+                    <option value="副菜">副菜</option>
+                    <option value="汁物">汁物</option>
+                    <option value="主食(ご飯・麺)">主食(ご飯・麺)</option>
+                    <option value="デザート">デザート</option>
+                    <option value="お弁当">お弁当</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="searchMethod">🍳 調理方法</label>
+                <select id="searchMethod">
+                    <!-- JavaScriptで追加されます -->
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="searchTime">⌛ 調理時間</label>
+                <select id="searchTime">
+                    <option value="any">指定なし</option>
+                    <option value="5分">5分</option>
+                    <option value="10分">10分</option>
+                    <option value="15分">15分</option>
+                    <option value="30分">30分</option>
+                    <option value="1時間">1時間</option>
+                </select>
+            </div>
+            <button onclick="suggestRecipe()">この条件で探す</button>
         </div>
-        <div class="input-group">
-            <label for="method">⏱️ 今日の調理方法は？</label>
-            <select id="method">
-                <option value="any">指定なし（とにかく美味しく！）</option>
-            </select>
-        </div>
-        <button onclick="suggestRecipe()">レシピを見る</button>
         
         <div id="result"></div>
         <div id="saveArea" class="save-area">
@@ -181,8 +225,8 @@
             const regSelect = document.getElementById('regMethod');
             if(regSelect) regSelect.innerHTML = methods.map(m => `<option value="${m}">${m}</option>`).join('');
 
-            const searchSelect = document.getElementById('method');
-            if(searchSelect) searchSelect.innerHTML = '<option value="any">指定なし（とにかく美味しく！）</option>' + 
+            const searchSelect = document.getElementById('searchMethod');
+            if(searchSelect) searchSelect.innerHTML = '<option value="any">指定なし</option>' + 
                                      methods.map(m => `<option value="${m}">${m}</option>`).join('');
 
             const tagsDiv = document.getElementById('methodTagsList');
@@ -242,6 +286,7 @@
 
         function resetRegisterForm() {
             document.getElementById('regIngredient').value = "";
+            document.getElementById('regGenre').value = "メイン";
             document.getElementById('regTitle').value = "";
             document.getElementById('regIngredientsList').value = "";
             document.getElementById('regSteps').value = "";
@@ -253,6 +298,7 @@
 
         async function saveCustomRecipe() {
             const ing = document.getElementById('regIngredient').value.trim();
+            const genre = document.getElementById('regGenre').value;
             const method = document.getElementById('regMethod').value;
             const time = document.getElementById('regTime').value;
             const title = document.getElementById('regTitle').value.trim();
@@ -265,7 +311,7 @@
                 return;
             }
 
-            const recipeData = { ingredient: ing, method: method, time: time, title: title, ingredientsList: ingList, steps: steps };
+            const recipeData = { ingredient: ing, genre: genre, method: method, time: time, title: title, ingredientsList: ingList, steps: steps };
 
             try {
                 if (!editDocId) {
@@ -303,8 +349,12 @@
                     let item = document.createElement("div");
                     item.className = "fav-item";
                     
+                    let genreText = r.genre ? r.genre : "未分類";
+
                     item.innerHTML = `
-                        <div style="font-size: 0.85em; color: #666; margin-bottom: 3px;">食材: <strong>${r.ingredient}</strong> (⚙️ ${r.method} / ⌛ ${r.time})</div>
+                        <div style="font-size: 0.85em; color: #666; margin-bottom: 3px;">
+                            <span class="genre-tag">${genreText}</span> 食材: <strong>${r.ingredient}</strong> (⚙️ ${r.method} / ⌛ ${r.time})
+                        </div>
                         <div class='recipe-title'>🍽️ ${r.title}</div>
                         <div style="margin-top: 5px; font-size: 0.9em;">
                             <strong>【材料】</strong><br>${r.ingredientsList.replace(/\n/g, "<br>")}<br>
@@ -337,6 +387,13 @@
             let r = JSON.parse(decodeURIComponent(encodedData));
 
             document.getElementById('regIngredient').value = r.ingredient;
+            
+            if(r.genre) {
+                document.getElementById('regGenre').value = r.genre;
+            } else {
+                document.getElementById('regGenre').value = "メイン";
+            }
+            
             document.getElementById('regMethod').value = r.method;
             document.getElementById('regTime').value = r.time || "5分";
             document.getElementById('regTitle').value = r.title;
@@ -354,13 +411,17 @@
         }
 
         async function suggestRecipe() {
-            const ingredient = document.getElementById('ingredient').value.trim();
-            const method = document.getElementById('method').value;
+            const ingredient = document.getElementById('searchIngredient').value.trim();
+            const genre = document.getElementById('searchGenre').value;
+            const method = document.getElementById('searchMethod').value;
+            const time = document.getElementById('searchTime').value;
+            
             const resultDiv = document.getElementById('result');
             const saveArea = document.getElementById('saveArea');
 
-            if (ingredient === "") {
-                resultDiv.innerHTML = "食材を入力してくださいね！";
+            // 全てが未入力・指定なしの場合はエラーにする
+            if (ingredient === "" && genre === "any" && method === "any" && time === "any") {
+                resultDiv.innerHTML = "検索条件をどれか一つ設定してください！";
                 resultDiv.style.display = "block";
                 saveArea.style.display = "none";
                 return;
@@ -368,25 +429,54 @@
 
             try {
                 const querySnapshot = await window.getDocs(window.collection(window.db, "sharedRecipes"));
-                let matchedRecipe = null;
+                let matchedRecipes = [];
 
                 querySnapshot.forEach((documentSnap) => {
                     let recipe = documentSnap.data();
-                    if (ingredient.includes(recipe.ingredient) && (recipe.method === method || method === "any")) {
-                        matchedRecipe = recipe;
+                    let isMatch = true;
+
+                    // 食材が入力されていれば、それが含まれるかチェック
+                    if (ingredient !== "" && !recipe.ingredient.includes(ingredient)) {
+                        isMatch = false;
+                    }
+                    // ジャンルが指定されていれば、それが一致するかチェック
+                    if (genre !== "any" && recipe.genre !== genre) {
+                        isMatch = false;
+                    }
+                    // 調理方法が指定されていれば、それが一致するかチェック
+                    if (method !== "any" && recipe.method !== method) {
+                        isMatch = false;
+                    }
+                    // 時間が指定されていれば、それが一致するかチェック
+                    if (time !== "any" && recipe.time !== time) {
+                        isMatch = false;
+                    }
+
+                    if (isMatch) {
+                        matchedRecipes.push(recipe);
                     }
                 });
 
-                if (matchedRecipe) {
-                    let tagText = `<span class='tag'>${matchedRecipe.method}</span> <span class='tag'>⌛ ${matchedRecipe.time}</span><br>`;
+                if (matchedRecipes.length > 0) {
+                    // 今回は複数見つかった場合は最初の1つを表示する仕様（ランダムにするなども可能）
+                    let matchedRecipe = matchedRecipes[0]; 
+                    
+                    let genreDisplay = matchedRecipe.genre ? `<span class='genre-tag'>${matchedRecipe.genre}</span> ` : "";
+                    let tagText = genreDisplay + `<span class='tag'>${matchedRecipe.method}</span> <span class='tag'>⌛ ${matchedRecipe.time}</span><br>`;
+                    
                     currentRecipeHTML = tagText + "<div class='recipe-title'>🍽️ " + matchedRecipe.title + "</div>" +
                                         "<div class='section-title'>🛒 用意するもの</div>" +
                                         matchedRecipe.ingredientsList.replace(/\n/g, "<br>") +
                                         "<div class='section-title'>🍳 手順</div>" +
                                         matchedRecipe.steps.replace(/\n/g, "<br>");
+                    
+                    if (matchedRecipes.length > 1) {
+                        currentRecipeHTML += `<p style="font-size:0.8em; color:#888; margin-top:10px;">※他にも ${matchedRecipes.length - 1} 件のレシピが見つかりました。</p>`;
+                    }
+                                        
                     saveArea.style.display = "flex";
                 } else {
-                    currentRecipeHTML = `<p style="text-align:center; color:#e53935; font-weight:bold;">該当するレシピが見つかりませんでした。<br>新しく登録してみましょう！</p>`;
+                    currentRecipeHTML = `<p style="text-align:center; color:#e53935; font-weight:bold;">該当するレシピが見つかりませんでした。<br>条件を変えてみるか、新しく登録してみましょう！</p>`;
                     saveArea.style.display = "none";
                 }
 
@@ -395,6 +485,8 @@
                 document.getElementById("recipeTag").value = ""; 
             } catch (e) {
                 console.error("検索エラー:", e);
+                resultDiv.innerHTML = "検索中にエラーが発生しました。";
+                resultDiv.style.display = "block";
             }
         }
 
