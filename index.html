@@ -10,7 +10,7 @@
         h2 { text-align: center; color: #ff9800; font-size: 1.4em; margin-bottom: 20px; }
         .input-group { margin-bottom: 15px; }
         label { font-size: 0.9em; font-weight: bold; color: #555; display: block; margin-bottom: 6px; }
-        input[type="text"], select, textarea { width: 100%; padding: 12px; box-sizing: border-box; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; font-family: inherit; }
+        input[type="text"], input[type="password"], select, textarea { width: 100%; padding: 12px; box-sizing: border-box; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; font-family: inherit; }
         textarea { resize: vertical; min-height: 80px; }
         
         button { background: #ff9800; color: white; border: none; padding: 14px; cursor: pointer; width: 100%; border-radius: 8px; font-size: 1.1em; font-weight: bold; transition: 0.2s; margin-top: 10px; }
@@ -35,8 +35,10 @@
         
         .favorites-section h3 { color: #4caf50; font-size: 1.1em; margin-top: 0; margin-bottom: 15px; }
         .fav-item { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 15px; position: relative; line-height: 1.6; border: 1px solid #eee; padding-top: 35px; }
-        .delete-btn { background: #e53935; color: white; font-size: 0.8em; padding: 5px 10px; width: auto; position: absolute; top: 10px; right: 10px; border-radius: 4px; }
-        .edit-btn { background: #ffb300; color: white; font-size: 0.8em; padding: 5px 10px; width: auto; position: absolute; top: 10px; right: 70px; border: none; border-radius: 4px; cursor: pointer; }
+        
+        /* 削除ボタン・編集ボタンは初期状態で非表示（オーナーモードでのみ表示） */
+        .delete-btn { background: #e53935; color: white; font-size: 0.8em; padding: 5px 10px; width: auto; position: absolute; top: 10px; right: 10px; border-radius: 4px; display: none; }
+        .edit-btn { background: #ffb300; color: white; font-size: 0.8em; padding: 5px 10px; width: auto; position: absolute; top: 10px; right: 70px; border: none; border-radius: 4px; cursor: pointer; display: none; }
         
         .user-tag { display: inline-block; background: #e0f7fa; color: #00796b; padding: 3px 10px; border-radius: 12px; font-size: 0.8em; margin-bottom: 10px; font-weight: bold; border: 1px solid #00acc1; }
 
@@ -50,9 +52,10 @@
         .method-tag { display: inline-block; background: #fff; border: 1px solid #ccc; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin: 2px; }
         .method-tag span { color: #e53935; cursor: pointer; margin-left: 5px; font-weight: bold; }
         
-        /* 検索フォームのデザイン調整 */
         .search-box { background: #fff3e0; padding: 15px; border-radius: 12px; border: 1px solid #ffcc80; margin-bottom: 20px; }
         .search-box h3 { font-size: 1em; color: #e65100; margin-top: 0; margin-bottom: 15px; text-align: center; }
+        
+        .owner-auth-box { background: #fce4ec; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #f8bbd0; font-size: 0.9em; }
     </style>
 
     <!-- FirebaseのSDKを読み込み -->
@@ -113,7 +116,7 @@
                     <option value="主食(ご飯・麺)">主食(ご飯・麺)</option>
                     <option value="デザート">デザート</option>
                     <option value="お弁当">お弁当</option>
-                    <option value="作り置き">作り置き</option>>
+                    <option value="作り置き">作り置き</option>
                 </select>
             </div>
             <div class="input-group">
@@ -157,8 +160,18 @@
 
         <div id="manageForm" class="box manage-box">
             <h3 style="color: #6a1b9a;">⚙️ 登録したレシピ一覧・編集</h3>
+            
+            <!-- オーナー認証エリア -->
+            <div class="owner-auth-box">
+                <label style="color: #c2185b; margin-bottom: 4px;">🔑 オーナー用合言葉（削除・編集用）</label>
+                <div style="display: flex; gap: 5px;">
+                    <input type="password" id="ownerPassword" placeholder="合言葉を入力" style="padding: 8px; font-size: 0.9em;">
+                    <button onclick="checkOwnerPassword()" style="margin: 0; width: auto; background: #e91e63; padding: 8px 12px; font-size: 0.9em;">解除</button>
+                </div>
+            </div>
+
             <div id="customRecipesList">読み込み中...</div>
-            <button onclick="toggleManageForm()" style="background: #999;">閉じる</button>
+            <button onclick="toggleManageForm()" style="background: #999; margin-top: 15px;">閉じる</button>
         </div>
 
         <!-- 検索ボックス -->
@@ -183,9 +196,7 @@
             </div>
             <div class="input-group">
                 <label for="searchMethod">🍳 調理方法</label>
-                <select id="searchMethod">
-                    <!-- JavaScriptで追加されます -->
-                </select>
+                <select id="searchMethod"></select>
             </div>
             <div class="input-group">
                 <label for="searchTime">⌛ 調理時間</label>
@@ -217,6 +228,21 @@
 
     <script>
         let currentRecipeHTML = ""; 
+        let isOwner = false; // オーナー権限フラグ
+
+        // ★ ここにお好みの合言葉（パスワード）を設定してください
+        const OWNER_SECRET = "manabe123"; 
+
+        function checkOwnerPassword() {
+            const inputVal = document.getElementById('ownerPassword').value;
+            if (inputVal === OWNER_SECRET) {
+                isOwner = true;
+                alert("オーナー権限が有効になりました。削除・編集ボタンが表示されます。");
+                displayCustomRecipes();
+            } else {
+                alert("合言葉が違います。");
+            }
+        }
 
         function getMethods() {
             return JSON.parse(localStorage.getItem("myMethodsV3")) || ["電子レンジ", "包丁なし", "フライパン"];
@@ -353,6 +379,9 @@
                     
                     let genreText = r.genre ? r.genre : "未分類";
 
+                    // オーナー権限が有効なときだけボタンを表示する
+                    let btnStyle = isOwner ? "display: block;" : "display: none;";
+
                     item.innerHTML = `
                         <div style="font-size: 0.85em; color: #666; margin-bottom: 3px;">
                             <span class="genre-tag">${genreText}</span> 食材: <strong>${r.ingredient}</strong> (⚙️ ${r.method} / ⌛ ${r.time})
@@ -362,8 +391,8 @@
                             <strong>【材料】</strong><br>${r.ingredientsList.replace(/\n/g, "<br>")}<br>
                             <strong>【手順】</strong><br>${r.steps.replace(/\n/g, "<br>")}
                         </div>
-                        <button class="edit-btn" onclick="editCustomRecipe('${id}', '${encodeURIComponent(JSON.stringify(r))}')">編集</button>
-                        <button class="delete-btn" onclick="deleteCustomRecipe('${id}')">削除</button>
+                        <button class="edit-btn" style="${btnStyle}" onclick="editCustomRecipe('${id}', '${encodeURIComponent(JSON.stringify(r))}')">編集</button>
+                        <button class="delete-btn" style="${btnStyle}" onclick="deleteCustomRecipe('${id}')">削除</button>
                     `;
                     listDiv.appendChild(item);
                 });
@@ -374,6 +403,10 @@
         }
 
         async function deleteCustomRecipe(id) {
+            if (!isOwner) {
+                alert("オーナー権限が必要です。");
+                return;
+            }
             if (confirm("本当にこの共通レシピを削除しますか？")) {
                 try {
                     await window.deleteDoc(window.doc(window.db, "sharedRecipes", id));
@@ -386,16 +419,14 @@
         }
 
         function editCustomRecipe(id, encodedData) {
+            if (!isOwner) {
+                alert("オーナー権限が必要です。");
+                return;
+            }
             let r = JSON.parse(decodeURIComponent(encodedData));
 
             document.getElementById('regIngredient').value = r.ingredient;
-            
-            if(r.genre) {
-                document.getElementById('regGenre').value = r.genre;
-            } else {
-                document.getElementById('regGenre').value = "メイン";
-            }
-            
+            document.getElementById('regGenre').value = r.genre || "メイン";
             document.getElementById('regMethod').value = r.method;
             document.getElementById('regTime').value = r.time || "5分";
             document.getElementById('regTitle').value = r.title;
@@ -421,7 +452,6 @@
             const resultDiv = document.getElementById('result');
             const saveArea = document.getElementById('saveArea');
 
-            // 全てが未入力・指定なしの場合はエラーにする
             if (ingredient === "" && genre === "any" && method === "any" && time === "any") {
                 resultDiv.innerHTML = "検索条件をどれか一つ設定してください！";
                 resultDiv.style.display = "block";
@@ -437,19 +467,15 @@
                     let recipe = documentSnap.data();
                     let isMatch = true;
 
-                    // 食材が入力されていれば、それが含まれるかチェック
                     if (ingredient !== "" && !recipe.ingredient.includes(ingredient)) {
                         isMatch = false;
                     }
-                    // ジャンルが指定されていれば、それが一致するかチェック
                     if (genre !== "any" && recipe.genre !== genre) {
                         isMatch = false;
                     }
-                    // 調理方法が指定されていれば、それが一致するかチェック
                     if (method !== "any" && recipe.method !== method) {
                         isMatch = false;
                     }
-                    // 時間が指定されていれば、それが一致するかチェック
                     if (time !== "any" && recipe.time !== time) {
                         isMatch = false;
                     }
@@ -460,9 +486,7 @@
                 });
 
                 if (matchedRecipes.length > 0) {
-                    // 今回は複数見つかった場合は最初の1つを表示する仕様（ランダムにするなども可能）
                     let matchedRecipe = matchedRecipes[0]; 
-                    
                     let genreDisplay = matchedRecipe.genre ? `<span class='genre-tag'>${matchedRecipe.genre}</span> ` : "";
                     let tagText = genreDisplay + `<span class='tag'>${matchedRecipe.method}</span> <span class='tag'>⌛ ${matchedRecipe.time}</span><br>`;
                     
@@ -520,7 +544,7 @@
                 let item = document.createElement("div");
                 item.className = "fav-item";
                 let tagHTML = `<span class="user-tag">🏷️ ${favorites[i].tag}</span><br>`;
-                item.innerHTML = tagHTML + favorites[i].html + `<button class="delete-btn" onclick="deleteFavorite(${i})">削除</button>`;
+                item.innerHTML = tagHTML + favorites[i].html + `<button class="delete-btn" style="display: block;" onclick="deleteFavorite(${i})">削除</button>`;
                 listDiv.appendChild(item);
             }
         }
