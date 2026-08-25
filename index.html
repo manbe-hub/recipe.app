@@ -10,7 +10,7 @@
         h2 { text-align: center; color: #ff9800; font-size: 1.4em; margin-bottom: 20px; }
         .input-group { margin-bottom: 15px; }
         label { font-size: 0.9em; font-weight: bold; color: #555; display: block; margin-bottom: 6px; }
-        input[type="text"], input[type="password"], select, textarea { width: 100%; padding: 12px; box-sizing: border-box; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; font-family: inherit; }
+        input[type="text"], input[type="password"], select, textarea, input[type="number"] { width: 100%; padding: 12px; box-sizing: border-box; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; font-family: inherit; }
         textarea { resize: vertical; min-height: 80px; }
         
         button { background: #ff9800; color: white; border: none; padding: 14px; cursor: pointer; width: 100%; border-radius: 8px; font-size: 1.1em; font-weight: bold; transition: 0.2s; margin-top: 10px; }
@@ -36,7 +36,6 @@
         .favorites-section h3 { color: #4caf50; font-size: 1.1em; margin-top: 0; margin-bottom: 15px; }
         .fav-item { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 15px; position: relative; line-height: 1.6; border: 1px solid #eee; padding-top: 35px; }
         
-        /* 削除ボタン・編集ボタンは初期状態で非表示（オーナーモードでのみ表示） */
         .delete-btn { background: #e53935; color: white; font-size: 0.8em; padding: 5px 10px; width: auto; position: absolute; top: 10px; right: 10px; border-radius: 4px; display: none; }
         .edit-btn { background: #ffb300; color: white; font-size: 0.8em; padding: 5px 10px; width: auto; position: absolute; top: 10px; right: 70px; border: none; border-radius: 4px; cursor: pointer; display: none; }
         
@@ -56,6 +55,10 @@
         .search-box h3 { font-size: 1em; color: #e65100; margin-top: 0; margin-bottom: 15px; text-align: center; }
         
         .owner-auth-box { background: #fce4ec; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #f8bbd0; font-size: 0.9em; }
+
+        /* お買い物計算ツール用スタイル */
+        .calc-box { background: #e8f5e9; padding: 15px; border-radius: 12px; border: 1px solid #a5d6a7; margin-top: 15px; display: none; }
+        .calc-box h4 { color: #2e7d32; margin-top: 0; margin-bottom: 10px; font-size: 1em; text-align: center; }
     </style>
 
     <!-- FirebaseのSDKを読み込み -->
@@ -105,7 +108,7 @@
             
             <div class="input-group">
                 <label>🍅 検索用のメイン食材</label>
-                <input type="text" id="regIngredient" placeholder="例：レタス">
+                <input type="text" id="regIngredient" placeholder="例：鶏もも肉">
             </div>
             <div class="input-group">
                 <label>🏷️ ジャンル</label>
@@ -144,15 +147,15 @@
             </div>
             <div class="input-group">
                 <label>📝 レシピ名</label>
-                <input type="text" id="regTitle" placeholder="例：レタスとツナの和え物">
+                <input type="text" id="regTitle" placeholder="例：コク旨ごま味噌炒め">
             </div>
             <div class="input-group">
-                <label>🛒 用意するもの（材料）</label>
-                <textarea id="regIngredientsList" placeholder="例：レタス 1/4玉、ツナ缶 1個"></textarea>
+                <label>🛒 用意するもの（1人前あたりの分量で記入すると計算できます）</label>
+                <textarea id="regIngredientsList" placeholder="例：&#10;鶏もも肉:100g&#10;味噌:1.5小さじ&#10;みりん:1.5小さじ&#10;キャベツ:100g"></textarea>
             </div>
             <div class="input-group">
                 <label>🍳 手順（作り方）</label>
-                <textarea id="regSteps" placeholder="例：1. レタスをちぎる&#10;2. 混ぜる"></textarea>
+                <textarea id="regSteps" placeholder="例：1. 具材を切る&#10;2. 炒める"></textarea>
             </div>
             <button id="submitRecipeBtn" style="background: #4caf50;" onclick="saveCustomRecipe()">このレシピを登録</button>
             <button onclick="toggleRegisterForm()" style="background: #999;">閉じる</button>
@@ -161,7 +164,6 @@
         <div id="manageForm" class="box manage-box">
             <h3 style="color: #6a1b9a;">⚙️ 登録したレシピ一覧・編集</h3>
             
-            <!-- オーナー認証エリア -->
             <div class="owner-auth-box">
                 <label style="color: #c2185b; margin-bottom: 4px;">🔑 オーナー用合言葉（削除・編集用）</label>
                 <div style="display: flex; gap: 5px;">
@@ -179,7 +181,7 @@
             <h3>🔍 レシピを探す</h3>
             <div class="input-group">
                 <label for="searchIngredient">🍅 食材（冷蔵庫にあるもの）</label>
-                <input type="text" id="searchIngredient" placeholder="例：レタス（空欄でもOK）" value="">
+                <input type="text" id="searchIngredient" placeholder="例：鶏もも肉（空欄でもOK）" value="">
             </div>
             <div class="input-group">
                 <label for="searchGenre">🏷️ ジャンル</label>
@@ -213,6 +215,30 @@
         </div>
         
         <div id="result"></div>
+
+        <!-- お買い物リスト自動計算エリア -->
+        <div id="calcBox" class="calc-box">
+            <h4>🛒 人数・日数に合わせてお買い物リストを作成</h4>
+            <div class="input-group" style="margin-bottom: 8px;">
+                <label style="font-size:0.85em;">世帯人数:</label>
+                <select id="calcPeople">
+                    <option value="2">2人分</option>
+                    <option value="3">3人分</option>
+                    <option value="4" selected>4人分</option>
+                </select>
+            </div>
+            <div class="input-group" style="margin-bottom: 8px;">
+                <label style="font-size:0.85em;">作り置き日数:</label>
+                <select id="calcDays">
+                    <option value="1">1日分</option>
+                    <option value="2">2日分</option>
+                    <option value="7" selected>7日分（1週間）</option>
+                </select>
+            </div>
+            <button onclick="calculateShoppingList()" style="background: #2e7d32; font-size: 0.95em; padding: 10px; margin-top: 5px;">このレシピの必要材料を計算する</button>
+            <div id="calcResultList" style="margin-top: 10px; font-size: 0.9em; line-height: 1.5;"></div>
+        </div>
+
         <div id="saveArea" class="save-area">
             <input type="text" id="recipeTag" placeholder="タグ (例: お弁当, 時短)">
             <button onclick="saveFavorite()">⭐ お気に入りに保存</button>
@@ -228,9 +254,9 @@
 
     <script>
         let currentRecipeHTML = ""; 
-        let isOwner = false; // オーナー権限フラグ
+        let currentIngredientsText = ""; // 計算用に現在のレシピの材料テキストを保持
+        let isOwner = false;
 
-        // ★ ここにお好みの合言葉（パスワード）を設定してください
         const OWNER_SECRET = "manabe123"; 
 
         function checkOwnerPassword() {
@@ -255,7 +281,7 @@
 
             const searchSelect = document.getElementById('searchMethod');
             if(searchSelect) searchSelect.innerHTML = '<option value="any">指定なし</option>' + 
-                                     methods.map(m => `<option value="${m}">${m}</option>`).join('');
+                                                   methods.map(m => `<option value="${m}">${m}</option>`).join('');
 
             const tagsDiv = document.getElementById('methodTagsList');
             if(tagsDiv) tagsDiv.innerHTML = methods.map(m => `<span class="method-tag">${m} <span onclick="deleteMethod('${m}')">×</span></span>`).join('');
@@ -378,8 +404,6 @@
                     item.className = "fav-item";
                     
                     let genreText = r.genre ? r.genre : "未分類";
-
-                    // オーナー権限が有効なときだけボタンを表示する
                     let btnStyle = isOwner ? "display: block;" : "display: none;";
 
                     item.innerHTML = `
@@ -451,11 +475,13 @@
             
             const resultDiv = document.getElementById('result');
             const saveArea = document.getElementById('saveArea');
+            const calcBox = document.getElementById('calcBox');
 
             if (ingredient === "" && genre === "any" && method === "any" && time === "any") {
                 resultDiv.innerHTML = "検索条件をどれか一つ設定してください！";
                 resultDiv.style.display = "block";
                 saveArea.style.display = "none";
+                calcBox.style.display = "none";
                 return;
             }
 
@@ -487,11 +513,13 @@
 
                 if (matchedRecipes.length > 0) {
                     let matchedRecipe = matchedRecipes[0]; 
+                    currentIngredientsText = matchedRecipe.ingredientsList; // 計算用に保持
+
                     let genreDisplay = matchedRecipe.genre ? `<span class='genre-tag'>${matchedRecipe.genre}</span> ` : "";
                     let tagText = genreDisplay + `<span class='tag'>${matchedRecipe.method}</span> <span class='tag'>⌛ ${matchedRecipe.time}</span><br>`;
                     
                     currentRecipeHTML = tagText + "<div class='recipe-title'>🍽️ " + matchedRecipe.title + "</div>" +
-                                        "<div class='section-title'>🛒 用意するもの</div>" +
+                                        "<div class='section-title'>🛒 用意するもの（1人前）</div>" +
                                         matchedRecipe.ingredientsList.replace(/\n/g, "<br>") +
                                         "<div class='section-title'>🍳 手順</div>" +
                                         matchedRecipe.steps.replace(/\n/g, "<br>");
@@ -499,11 +527,14 @@
                     if (matchedRecipes.length > 1) {
                         currentRecipeHTML += `<p style="font-size:0.8em; color:#888; margin-top:10px;">※他にも ${matchedRecipes.length - 1} 件のレシピが見つかりました。</p>`;
                     }
-                                        
+                        
                     saveArea.style.display = "flex";
+                    calcBox.style.display = "block";
+                    document.getElementById('calcResultList').innerHTML = "";
                 } else {
                     currentRecipeHTML = `<p style="text-align:center; color:#e53935; font-weight:bold;">該当するレシピが見つかりませんでした。<br>条件を変えてみるか、新しく登録してみましょう！</p>`;
                     saveArea.style.display = "none";
+                    calcBox.style.display = "none";
                 }
 
                 resultDiv.innerHTML = currentRecipeHTML;
@@ -514,6 +545,48 @@
                 resultDiv.innerHTML = "検索中にエラーが発生しました。";
                 resultDiv.style.display = "block";
             }
+        }
+
+        // 人数と日数からお買い物リストを自動計算する関数
+        function calculateShoppingList() {
+            const people = parseInt(document.getElementById('calcPeople').value);
+            const days = parseInt(document.getElementById('calcDays').value);
+            const lines = currentIngredientsText.split('\n');
+            let html = `<strong>【計算結果：${people}人分 × ${days}日分】</strong><br><ul style="margin: 5px 0 0 20px; padding: 0;">`;
+
+            lines.forEach(line => {
+                if (!line.trim()) return;
+                // 「食材名:数字単位」の形式を想定 (例: 鶏もも肉:100g, 味噌:1.5小さじ)
+                let parts = line.split(':');
+                if (parts.length < 2) {
+                    html += `<li>${line} (※数量の自動計算ができませんでした)</li>`;
+                    return;
+                }
+                let name = parts[0].trim();
+                let rest = parts[1].trim();
+
+                // 数字と単位を抽出する正規表現
+                let match = rest.match(/^([\d.]+)(.*)$/);
+                if (match) {
+                    let baseAmount = parseFloat(match[1]);
+                    let unit = match[2].trim();
+                    let total = baseAmount * people * days;
+
+                    // 鶏もも肉が2000g（2kg）を超える場合のスマート表示アシスト
+                    let memo = "";
+                    if (name.includes("鶏もも肉") && total > 2000) {
+                        let extra = total - 2000;
+                        memo = ` <span style="color:#d84315; font-weight:bold;">（業務スーパーの2kgパック 1袋 ＋ 追加 ${extra}${unit}！）</span>`;
+                    }
+
+                    html += `<li><strong>${name}</strong>: ${total}${unit}${memo}</li>`;
+                } else {
+                    html += `<li>${line}</li>`;
+                }
+            });
+
+            html += "</ul>";
+            document.getElementById('calcResultList').innerHTML = html;
         }
 
         function saveFavorite() {
