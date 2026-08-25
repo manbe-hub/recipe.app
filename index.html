@@ -8,14 +8,15 @@
         h1, h2 { color: #2c3e50; }
         .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .section { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
-        input, select, button { padding: 8px; margin: 5px 0; font-size: 14px; }
-        button { cursor: pointer; background: #3498db; color: white; border: none; border-radius: 4px; }
+        input, select, button { padding: 8px; margin: 5px 0; font-size: 14px; width: 100%; box-sizing: border-box; }
+        .search-box { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+        button { cursor: pointer; background: #3498db; color: white; border: none; border-radius: 4px; width: auto; }
         button:hover { background: #2980b9; }
         .recipe-card { background: #fdfdfd; border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 6px; }
         .badge { display: inline-block; padding: 2px 6px; font-size: 12px; background: #e0e0e0; border-radius: 4px; margin-right: 5px; }
         .owner-only { display: none; background: #fff3cd; padding: 10px; border: 1px solid #ffeeba; border-radius: 4px; }
         .shopping-item { display: flex; align-items: center; justify-content: space-between; margin: 5px 0; }
-        .counter-btn { padding: 2px 8px; font-weight: bold; background: #e74c3c; }
+        .counter-btn { padding: 2px 8px; font-weight: bold; background: #e74c3c; width: auto; }
         .counter-btn.plus { background: #2ecc71; }
     </style>
 </head>
@@ -28,30 +29,32 @@
     <!-- オーナー限定レシピ登録エリア -->
     <div id="ownerArea" class="owner-only section">
         <h3>👑 オーナー用：新規レシピ登録</h3>
-        <input type="text" id="newTitle" placeholder="レシピ名"><br>
-        <input type="text" id="newCategory" placeholder="カテゴリ（メイン等）"><br>
-        <input type="number" id="newTime" placeholder="調理時間（分）"><br>
-        <input type="text" id="newIngredients" placeholder="材料（例: 鶏もも肉:1/2枚, 玉ねぎ:1/4個）"><br>
+        <input type="text" id="newTitle" placeholder="レシピ名">
+        <input type="text" id="newCategory" placeholder="カテゴリ（メイン等）">
+        <input type="number" id="newTime" placeholder="調理時間（分）">
+        <input type="text" id="newIngredients" placeholder="材料（例: じゃがいも:1, 豚ひき肉:100）">
         <button onclick="addRecipe()">レシピを追加</button>
     </div>
 
-    <!-- 検索エリア -->
+    <!-- 🔍 検索エリア（食材・レシピ名・調理時間） -->
     <div class="section">
         <h2>🔍 レシピを探す</h2>
-        <input type="text" id="searchKeyword" placeholder="レシピ名で検索..." oninput="searchRecipes()">
-        <select id="searchTime" onchange="searchRecipes()">
-            <option value="">調理時間を選ばない</option>
-            <option value="15">15分以内</option>
-            <option value="30">30分以内</option>
-            <option value="60">60分以内</option>
-        </select>
+        <div class="search-box">
+            <input type="text" id="searchIngredient" placeholder="🍅 食材で検索（例: じゃがいも、豚ひき肉）" oninput="searchRecipes()">
+            <input type="text" id="searchKeyword" placeholder="🏷️ レシピ名で検索..." oninput="searchRecipes()">
+            <select id="searchTime" onchange="searchRecipes()">
+                <option value="">⌛ 調理時間（指定なし）</option>
+                <option value="15">15分以内</option>
+                <option value="30">30分以内</option>
+                <option value="60">60分以内</option>
+            </select>
+        </div>
         <div id="recipeList"></div>
     </div>
 
     <!-- 作りたいリスト ＆ お買い物リスト -->
     <div class="section">
         <h2>🛒 作りたいリスト ＆ お買い物リスト</h2>
-        <p>「作りたいリスト」に入れたレシピから、自動でお買い物リストを作成します。</p>
         <div id="wantToList"></div>
         <h3>お買い物チェックリスト（数量調整可能）</h3>
         <div id="shoppingList"></div>
@@ -67,10 +70,10 @@
 </div>
 
 <script>
-    // 1. 登録不要の匿名ユーザー識別（LocalStorageを利用）
+    // 1. 匿名ユーザー識別（LocalStorage）
     let userId = localStorage.getItem('app_user_id');
     if (!userId) {
-        userId = 'user_' + Math.random().toString(36.substring(2, 9));
+        userId = 'user_' + Math.random().toString(36).substring(2, 9);
         localStorage.setItem('app_user_id', userId);
     }
     document.getElementById('userId').innerText = userId;
@@ -87,7 +90,7 @@
         }
     }
 
-    // サンプルレシピデータ
+    // サンプルレシピデータ（材料をキー・バリューで保持）
     let recipes = [
         { id: 1, title: "じゃがいもガレット", category: "メイン", time: 15, ingredients: {"じゃがいも": 1, "ブロッコリー": 0.25, "片栗粉": 0.5} },
         { id: 2, title: "キャベツとチーズのガレット", category: "メイン", time: 15, ingredients: {"キャベツ": 0.25, "ベーコン": 40, "チーズ": 1} },
@@ -97,17 +100,23 @@
 
     let userFavorites = JSON.parse(localStorage.getItem('favorites_' + userId)) || [];
     let wantToCook = JSON.parse(localStorage.getItem('wantToCook_' + userId)) || [];
-    let shoppingQuantities = {}; // お買い物の数量カウンター管理
+    let shoppingQuantities = {};
 
-    // 2. 検索・調理時間以内抽出・短い順ソート
+    // 🔍 検索・絞り込みロジック（食材 ＆ レシピ名 ＆ 調理時間以内 ＋ 短い順ソート）
     function searchRecipes() {
-        const keyword = document.getElementById('searchKeyword').value.toLowerCase();
+        const ingQuery = document.getElementById('searchIngredient').value.toLowerCase().trim();
+        const keyword = document.getElementById('searchKeyword').value.toLowerCase().trim();
         const maxTime = parseInt(document.getElementById('searchTime').value) || 999;
 
         let filtered = recipes.filter(r => {
-            const matchName = r.title.toLowerCase().includes(keyword);
-            const matchTime = r.time <= maxTime;
-            return matchName && matchTime;
+            // 1. 食材名で一致するか（持っている材料のキーに含まれるか）
+            const matchesIng = ingQuery === "" || Object.keys(r.ingredients).some(ing => ing.toLowerCase().includes(ingQuery));
+            // 2. レシピ名で一致するか
+            const matchesName = r.title.toLowerCase().includes(keyword);
+            // 3. 指定した調理時間以内か
+            const matchesTime = r.time <= maxTime;
+
+            return matchesIng && matchesName && matchesTime;
         });
 
         // 調理時間が短い順にソート
@@ -117,18 +126,21 @@
         listDiv.innerHTML = '';
 
         if (filtered.length === 0) {
-            listDiv.innerHTML = '<p>該当するレシピはありません。</p>';
+            listDiv.innerHTML = '<p>条件に一致するレシピはありません。</p>';
             return;
         }
 
         filtered.forEach(r => {
             const isFav = userFavorites.includes(r.id);
             const isWant = wantToCook.includes(r.id);
+            const ingText = Object.keys(r.ingredients).join(', ');
+
             let html = `
                 <div class="recipe-card">
                     <strong>🍽️ ${r.title}</strong> 
                     <span class="badge">${r.category}</span>
                     <span class="badge">⌛ ${r.time}分</span><br>
+                    <small>🛒 材料: ${ingText}</small><br><br>
                     <button onclick="toggleFavorite(${r.id})">${isFav ? '❤️ お気に入り解除' : '🤍 お気に入り'}</button>
                     <button onclick="toggleWantToCook(${r.id})">${isWant ? '✅ 作りたいリストから外す' : '➕ 作りたいリストに追加'}</button>
                     ${isOwner ? `<button style="background:#e74c3c;" onclick="deleteRecipe(${r.id})">削除</button>` : ''}
@@ -167,10 +179,10 @@
         div.innerHTML = wantToCook.map(id => {
             const r = recipes.find(item => item.id === id);
             return `<div>📌 ${r ? r.title : ''}</div>`;
-        }).join('') || 'なし';
+        }).join('') || '<p>なし</p>';
     }
 
-    // 3. お買い物リスト生成 ＋ カウンター機能付き
+    // お買い物リスト生成 ＋ カウンター機能付き
     function updateShoppingList() {
         let aggregated = {};
         wantToCook.forEach(id => {
@@ -191,7 +203,6 @@
             return;
         }
 
-        // 初期値の同期
         for (let [ing, qty] of Object.entries(aggregated)) {
             if (shoppingQuantities[ing] === undefined) {
                 shoppingQuantities[ing] = qty;
@@ -220,7 +231,7 @@
         }
     }
 
-    // 4. 余り食材からの逆引き提案
+    // 余り食材からの逆引き提案
     function suggestRecipes() {
         const inputStr = document.getElementById('leftoverInput').value;
         const available = inputStr.split(',').map(s => s.trim()).filter(s => s);
@@ -233,7 +244,6 @@
 
         let matches = recipes.filter(r => {
             const ingKeys = Object.keys(r.ingredients);
-            // 入力された食材のいずれかを含んでいるレシピを提案
             return ingKeys.some(ing => available.some(av => ing.includes(av)));
         });
 
