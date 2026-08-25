@@ -12,6 +12,8 @@
         .search-box { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
         button { cursor: pointer; background: #3498db; color: white; border: none; border-radius: 4px; width: auto; }
         button:hover { background: #2980b9; }
+        .search-btn { background: #27ae60; font-weight: bold; width: 100%; padding: 10px; }
+        .search-btn:hover { background: #219653; }
         .recipe-card { background: #fdfdfd; border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 6px; }
         .badge { display: inline-block; padding: 2px 6px; font-size: 12px; background: #e0e0e0; border-radius: 4px; margin-right: 5px; }
         .owner-only { display: none; background: #fff3cd; padding: 10px; border: 1px solid #ffeeba; border-radius: 4px; }
@@ -36,18 +38,19 @@
         <button onclick="addRecipe()">レシピを追加</button>
     </div>
 
-    <!-- 🔍 検索エリア（食材・レシピ名・調理時間） -->
+    <!-- 🔍 検索エリア（食材・レシピ名・調理時間 ＋ 検索ボタン） -->
     <div class="section">
         <h2>🔍 レシピを探す</h2>
         <div class="search-box">
-            <input type="text" id="searchIngredient" placeholder="🍅 食材で検索（例: じゃがいも、豚ひき肉）" oninput="searchRecipes()">
-            <input type="text" id="searchKeyword" placeholder="🏷️ レシピ名で検索..." oninput="searchRecipes()">
-            <select id="searchTime" onchange="searchRecipes()">
+            <input type="text" id="searchIngredient" placeholder="🍅 食材で検索（例: じゃがいも、豚ひき肉）">
+            <input type="text" id="searchKeyword" placeholder="🏷️ レシピ名で検索...">
+            <select id="searchTime">
                 <option value="">⌛ 調理時間（指定なし）</option>
                 <option value="15">15分以内</option>
                 <option value="30">30分以内</option>
                 <option value="60">60分以内</option>
             </select>
+            <button class="search-btn" onclick="searchRecipes()">🔍 この条件で検索する</button>
         </div>
         <div id="recipeList"></div>
     </div>
@@ -90,7 +93,7 @@
         }
     }
 
-    // サンプルレシピデータ（材料をキー・バリューで保持）
+    // サンプルレシピデータ
     let recipes = [
         { id: 1, title: "じゃがいもガレット", category: "メイン", time: 15, ingredients: {"じゃがいも": 1, "ブロッコリー": 0.25, "片栗粉": 0.5} },
         { id: 2, title: "キャベツとチーズのガレット", category: "メイン", time: 15, ingredients: {"キャベツ": 0.25, "ベーコン": 40, "チーズ": 1} },
@@ -109,11 +112,8 @@
         const maxTime = parseInt(document.getElementById('searchTime').value) || 999;
 
         let filtered = recipes.filter(r => {
-            // 1. 食材名で一致するか（持っている材料のキーに含まれるか）
             const matchesIng = ingQuery === "" || Object.keys(r.ingredients).some(ing => ing.toLowerCase().includes(ingQuery));
-            // 2. レシピ名で一致するか
             const matchesName = r.title.toLowerCase().includes(keyword);
-            // 3. 指定した調理時間以内か
             const matchesTime = r.time <= maxTime;
 
             return matchesIng && matchesName && matchesTime;
@@ -276,7 +276,7 @@
         }
     }
 
-    // 初期読み込み
+    // 初回起動時は全件表示
     searchRecipes();
     updateWantToList();
     updateShoppingList();
